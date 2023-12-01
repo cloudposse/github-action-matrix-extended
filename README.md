@@ -1,6 +1,8 @@
 
 <!-- markdownlint-disable -->
-# example-github-action-composite [![Latest Release](https://img.shields.io/github/release/cloudposse/example-github-action-composite.svg)](https://github.com/cloudposse/example-github-action-composite/releases/latest) [![Slack Community](https://slack.cloudposse.com/badge.svg)](https://slack.cloudposse.com)
+# github-action-matrix-unlimited-jq-query
+
+ [![Latest Release](https://img.shields.io/github/release/cloudposse/github-action-matrix-unlimited-jq-query.svg)](https://github.com/cloudposse/github-action-matrix-unlimited-jq-query/releases/latest) [![Slack Community](https://slack.cloudposse.com/badge.svg)](https://slack.cloudposse.com)
 <!-- markdownlint-restore -->
 
 [![README Header][readme_header_img]][readme_header_link]
@@ -28,7 +30,7 @@
 
 -->
 
-Template repository of composite GitHub Action
+GitHub Action to group list of Atmos stacks and split each group on chunks of 256 items.
 
 ---
 
@@ -58,8 +60,27 @@ It's 100% Open Source and licensed under the [APACHE2](LICENSE).
 
 ## Introduction
 
-This is template repository to create composite GitHub Actions. 
-Feel free to use it as reference and starting point.
+GitHub Actions matrix have [limit to 256 items](https://docs.github.com/en/actions/using-jobs/using-a-matrix-for-your-jobs#using-a-matrix-strategy)
+There is workaround to extend the limit with [reusable workflows](https://github.com/orgs/community/discussions/38704)
+This GitHub Action output query support up to 3 nested workflows levels.
+In theory run 256 ^ 3 (i.e., 16 777 216) jobs per workflow run!
+
+| Matrix max nested level | Total jobs count limit   |
+|-------------------------|--------------------------|
+|         1               |            256           |
+|         2               |           65 536         | 
+|         3               |         16 777 216       |
+
+
+> [!WARNING]  
+> Restrict concurrency to avoid DDOS GitHub Actions API and get restriction on your account.
+>
+>   | Matrix max nested level | First Matrix Concurrency | Second Matrix Concurrency | Third Matrix Concurrency |
+>   |-------------------------|--------------------------|---------------------------|--------------------------|
+>   |         1               |            x             |              -            |             -            |
+>   |         2               |            1             |              x            |             -            | 
+>   |         3               |            1             |              1            |             x            |
+>
 
 
 
@@ -69,6 +90,13 @@ Feel free to use it as reference and starting point.
 
 
 
+The action have 3 modes depends of how many nested levels you want. 
+The settings affect to reusable workflows count and usage pattern.
+
+## 1 Level of nested matrices
+
+`.github/workflows/matrices-1.yml`
+
 ```yaml
   name: Pull Request
   on:
@@ -77,17 +105,237 @@ Feel free to use it as reference and starting point.
       types: [opened, synchronize, reopened, closed, labeled, unlabeled]
 
   jobs:
-    context:
-      runs-on: ubuntu-latest
-      steps:
-        - name: Example action
-          uses: cloudposse/example-github-action-composite@main
-          id: example
-          with:
-            param1: true
-
+    matrix-builder:
+      runs-on: self-hosted
+      name: Affected stacks
       outputs:
-        result: ${{ steps.example.outputs.result1 }}
+        matrix: ${{ steps.jq.outputs.output }}
+      steps:
+        - id: setup-matrix
+          uses: druzsan/setup-matrix@v1
+          with:
+            matrix: |
+              os: ubuntu-latest windows-latest macos-latest,
+              python-version: 3.8 3.9 3.10
+              arch: arm64 amd64
+
+        - uses: cloudposse/github-action-matrix-unlimited-jq-query@main
+          id: query
+          with:
+            sort-by: '[.python-version, .os, .arch] | join("-")'
+            group-by: '.arch'
+            nested-matrices-count: '1'          
+
+        - id: jq
+          uses: cloudposse/github-action-jq@v0
+          with:
+            compact: true
+            input: ${{ steps.setup-matrix.outputs.matrix }}
+            script: ${{ steps.query.outputs.query }}
+
+    operation:
+      if: ${{ needs.matrix-builder.outputs.matrix != '{"include":[]}' }}
+      needs:
+        - matrix-builder
+      strategy:
+        max-parallel: 10
+        fail-fast: false # Don't fail fast to avoid locking TF State
+        matrix: ${{ fromJson(needs.matrix-builder.outputs.matrix) }}
+      name: Do (${{ matrix.arch }})
+      runs-on: self-hosted
+      steps:
+        - shell: bash
+          run: |
+            echo "Do real work - ${{ matrix.os }} - ${{ matrix.arch }} - ${{ matrix.python-version }}"
+```
+
+## 2 Level of nested matrices
+
+`.github/workflows/matrices-1.yml`
+
+```yaml
+  name: Pull Request
+  on:
+    pull_request:
+      branches: [ 'main' ]
+      types: [opened, synchronize, reopened, closed, labeled, unlabeled]
+
+  jobs:
+    matrix-builder:
+      runs-on: self-hosted
+      name: Affected stacks
+      outputs:
+        matrix: ${{ steps.jq.outputs.output }}
+      steps:
+        - id: setup-matrix
+          uses: druzsan/setup-matrix@v1
+          with:
+            matrix: |
+              os: ubuntu-latest windows-latest macos-latest,
+              python-version: 3.8 3.9 3.10
+              arch: arm64 amd64
+
+        - uses: cloudposse/github-action-matrix-unlimited-jq-query@main
+          id: query
+          with:
+            sort-by: '[.python-version, .os, .arch] | join("-")'
+            group-by: '.arch'
+            nested-matrices-count: '1'          
+
+        - id: jq
+          uses: cloudposse/github-action-jq@v0
+          with:
+            compact: true
+            input: ${{ steps.setup-matrix.outputs.matrix }}
+            script: ${{ steps.query.outputs.query }}
+
+    operation:
+      if: ${{ needs.matrix-builder.outputs.matrix != '{"include":[]}' }}
+      uses: ./.github/workflows/matrices-2.yml
+      needs:
+        - matrix-builder
+      strategy:
+        max-parallel: 1 # This is important to avoid ddos GHA API
+        fail-fast: false # Don't fail fast to avoid locking TF State
+        matrix: ${{ fromJson(needs.matrix-builder.outputs.matrix) }}
+      name: Group (${{ matrix.name }})
+      with:
+        items: ${{ matrix.items }}
+```
+
+`.github/workflows/matrices-2.yml`
+
+```yaml
+  name: Reusable workflow for 2 level of nested matrices
+  on:
+    workflow_call:
+      inputs:
+        items:
+          description: "Items"
+          required: true
+          type: string
+
+  jobs:
+    operation:
+      if: ${{ inputs.items != '{"include":[]}' }}
+      strategy:
+        max-parallel: 10
+        fail-fast: false # Don't fail fast to avoid locking TF State
+        matrix: ${{ fromJson(inputs.items) }}
+      name: Do (${{ matrix.arch }})
+      runs-on: self-hosted
+      steps:
+        - shell: bash
+          run: |
+            echo "Do real work - ${{ matrix.os }} - ${{ matrix.arch }} - ${{ matrix.python-version }}"
+```
+
+
+## 3 Level of nested matrices
+
+`.github/workflows/matrices-1.yml`
+
+```yaml
+  name: Pull Request
+  on:
+    pull_request:
+      branches: [ 'main' ]
+      types: [opened, synchronize, reopened, closed, labeled, unlabeled]
+
+  jobs:
+    matrix-builder:
+      runs-on: self-hosted
+      name: Affected stacks
+      outputs:
+        matrix: ${{ steps.jq.outputs.output }}
+      steps:
+        - id: setup-matrix
+          uses: druzsan/setup-matrix@v1
+          with:
+            matrix: |
+              os: ubuntu-latest windows-latest macos-latest,
+              python-version: 3.8 3.9 3.10
+              arch: arm64 amd64
+
+        - uses: cloudposse/github-action-matrix-unlimited-jq-query@main
+          id: query
+          with:
+            sort-by: '[.python-version, .os, .arch] | join("-")'
+            group-by: '.arch'
+            nested-matrices-count: '1'          
+
+        - id: jq
+          uses: cloudposse/github-action-jq@v0
+          with:
+            compact: true
+            input: ${{ steps.setup-matrix.outputs.matrix }}
+            script: ${{ steps.query.outputs.query }}
+
+    operation:
+      if: ${{ needs.matrix-builder.outputs.matrix != '{"include":[]}' }}
+      uses: ./.github/workflows/matrices-2.yml
+      needs:
+        - matrix-builder
+      strategy:
+        max-parallel: 1 # This is important to avoid ddos GHA API
+        fail-fast: false # Don't fail fast to avoid locking TF State
+        matrix: ${{ fromJson(needs.matrix-builder.outputs.matrix) }}
+      name: Group (${{ matrix.name }})
+      with:
+        items: ${{ matrix.items }}
+```
+
+`.github/workflows/matrices-2.yml`
+
+```yaml
+  name: Reusable workflow for 2 level of nested matrices
+  on:
+    workflow_call:
+      inputs:
+        items:
+          description: "Items"
+          required: true
+          type: string
+
+  jobs:
+    operation:
+      if: ${{ inputs.items != '{"include":[]}' }}
+      uses: ./.github/workflows/matrices-3.yml
+      strategy:
+        max-parallel: 1 # This is important to avoid ddos GHA API
+        fail-fast: false # Don't fail fast to avoid locking TF State
+        matrix: ${{ fromJson(inputs.items) }}
+      name: Group (${{ matrix.name }})
+      with:
+        items: ${{ matrix.items }}
+```
+
+
+`.github/workflows/matrices-3.yml`
+
+```yaml
+  name: Reusable workflow for 3 level of nested matrices
+  on:
+    workflow_call:
+      inputs:
+        items:
+          description: "Items"
+          required: true
+          type: string
+
+  jobs:
+    operation:
+      if: ${{ inputs.items != '{"include":[]}' }}
+      strategy:
+        max-parallel: 10
+        fail-fast: false # Don't fail fast to avoid locking TF State
+        matrix: ${{ fromJson(inputs.items) }}
+      name: Do (${{ matrix.arch }})
+      runs-on: self-hosted
+      steps:
+        - shell: bash
+          run: |
+            echo "Do real work - ${{ matrix.os }} - ${{ matrix.arch }} - ${{ matrix.python-version }}"
 ```
 
 
@@ -101,21 +349,23 @@ Feel free to use it as reference and starting point.
 
 | Name | Description | Default | Required |
 |------|-------------|---------|----------|
-| param1 | Input parameter placeholder | true | true |
+| group-by | Group by query | empty | false |
+| nested-matrices-count | Matrices nested levels count (from 1 to 3) | 1 | false |
+| sort-by | Sort by query | empty | false |
 
 
 ## Outputs
 
 | Name | Description |
 |------|-------------|
-| result1 | Output result placeholder |
+| query | Matrix unlimited JQ query |
 <!-- markdownlint-restore -->
 
 
 
 ## Share the Love
 
-Like this project? Please give it a ★ on [our GitHub](https://github.com/cloudposse/example-github-action-composite)! (it helps us **a lot**)
+Like this project? Please give it a ★ on [our GitHub](https://github.com/cloudposse/github-action-matrix-unlimited-jq-query)! (it helps us **a lot**)
 
 Are you using this project or any of our other projects? Consider [leaving a testimonial][testimonial]. =)
 
@@ -125,21 +375,21 @@ Are you using this project or any of our other projects? Consider [leaving a tes
 
 Check out these related projects.
 
+- [Setup matrix](https://github.com/druzsan/setup-matrix) - GitHub action to create reusable dynamic job matrices for your workflows.
 
 
 ## References
 
 For additional context, refer to some of these links.
 
-- [github-actions-workflows](https://github.com/cloudposse/github-actions-workflows) - Reusable workflows for different types of projects
-- [example-github-action-release-workflow](https://github.com/cloudposse/example-github-action-release-workflow) - Example application with complicated release workflow
+- [github-action-atmos-affected-stacks](https://github.com/cloudposse/github-action-atmos-affected-stacks) - A composite workflow that runs the atmos describe affected command
 
 
 ## Help
 
 **Got a question?** We got answers.
 
-File a GitHub [issue](https://github.com/cloudposse/example-github-action-composite/issues), send us an [email][email] or join our [Slack Community][slack].
+File a GitHub [issue](https://github.com/cloudposse/github-action-matrix-unlimited-jq-query/issues), send us an [email][email] or join our [Slack Community][slack].
 
 [![README Commercial Support][readme_commercial_support_img]][readme_commercial_support_link]
 
@@ -187,7 +437,7 @@ Sign up for [our newsletter][newsletter] that covers everything on our technolog
 
 ### Bug Reports & Feature Requests
 
-Please use the [issue tracker](https://github.com/cloudposse/example-github-action-composite/issues) to report any bugs or file feature requests.
+Please use the [issue tracker](https://github.com/cloudposse/github-action-matrix-unlimited-jq-query/issues) to report any bugs or file feature requests.
 
 ### Developing
 
@@ -275,33 +525,33 @@ Check out [our other projects][github], [follow us on twitter][twitter], [apply 
 [![Beacon][beacon]][website]
 <!-- markdownlint-disable -->
   [logo]: https://cloudposse.com/logo-300x69.svg
-  [docs]: https://cpco.io/docs?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/example-github-action-composite&utm_content=docs
-  [website]: https://cpco.io/homepage?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/example-github-action-composite&utm_content=website
-  [github]: https://cpco.io/github?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/example-github-action-composite&utm_content=github
-  [jobs]: https://cpco.io/jobs?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/example-github-action-composite&utm_content=jobs
-  [hire]: https://cpco.io/hire?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/example-github-action-composite&utm_content=hire
-  [slack]: https://cpco.io/slack?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/example-github-action-composite&utm_content=slack
-  [linkedin]: https://cpco.io/linkedin?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/example-github-action-composite&utm_content=linkedin
-  [twitter]: https://cpco.io/twitter?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/example-github-action-composite&utm_content=twitter
-  [testimonial]: https://cpco.io/leave-testimonial?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/example-github-action-composite&utm_content=testimonial
-  [office_hours]: https://cloudposse.com/office-hours?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/example-github-action-composite&utm_content=office_hours
-  [newsletter]: https://cpco.io/newsletter?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/example-github-action-composite&utm_content=newsletter
-  [discourse]: https://ask.sweetops.com/?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/example-github-action-composite&utm_content=discourse
-  [email]: https://cpco.io/email?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/example-github-action-composite&utm_content=email
-  [commercial_support]: https://cpco.io/commercial-support?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/example-github-action-composite&utm_content=commercial_support
-  [we_love_open_source]: https://cpco.io/we-love-open-source?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/example-github-action-composite&utm_content=we_love_open_source
-  [terraform_modules]: https://cpco.io/terraform-modules?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/example-github-action-composite&utm_content=terraform_modules
+  [docs]: https://cpco.io/docs?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-matrix-unlimited-jq-query&utm_content=docs
+  [website]: https://cpco.io/homepage?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-matrix-unlimited-jq-query&utm_content=website
+  [github]: https://cpco.io/github?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-matrix-unlimited-jq-query&utm_content=github
+  [jobs]: https://cpco.io/jobs?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-matrix-unlimited-jq-query&utm_content=jobs
+  [hire]: https://cpco.io/hire?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-matrix-unlimited-jq-query&utm_content=hire
+  [slack]: https://cpco.io/slack?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-matrix-unlimited-jq-query&utm_content=slack
+  [linkedin]: https://cpco.io/linkedin?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-matrix-unlimited-jq-query&utm_content=linkedin
+  [twitter]: https://cpco.io/twitter?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-matrix-unlimited-jq-query&utm_content=twitter
+  [testimonial]: https://cpco.io/leave-testimonial?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-matrix-unlimited-jq-query&utm_content=testimonial
+  [office_hours]: https://cloudposse.com/office-hours?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-matrix-unlimited-jq-query&utm_content=office_hours
+  [newsletter]: https://cpco.io/newsletter?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-matrix-unlimited-jq-query&utm_content=newsletter
+  [discourse]: https://ask.sweetops.com/?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-matrix-unlimited-jq-query&utm_content=discourse
+  [email]: https://cpco.io/email?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-matrix-unlimited-jq-query&utm_content=email
+  [commercial_support]: https://cpco.io/commercial-support?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-matrix-unlimited-jq-query&utm_content=commercial_support
+  [we_love_open_source]: https://cpco.io/we-love-open-source?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-matrix-unlimited-jq-query&utm_content=we_love_open_source
+  [terraform_modules]: https://cpco.io/terraform-modules?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-matrix-unlimited-jq-query&utm_content=terraform_modules
   [readme_header_img]: https://cloudposse.com/readme/header/img
-  [readme_header_link]: https://cloudposse.com/readme/header/link?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/example-github-action-composite&utm_content=readme_header_link
+  [readme_header_link]: https://cloudposse.com/readme/header/link?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-matrix-unlimited-jq-query&utm_content=readme_header_link
   [readme_footer_img]: https://cloudposse.com/readme/footer/img
-  [readme_footer_link]: https://cloudposse.com/readme/footer/link?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/example-github-action-composite&utm_content=readme_footer_link
+  [readme_footer_link]: https://cloudposse.com/readme/footer/link?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-matrix-unlimited-jq-query&utm_content=readme_footer_link
   [readme_commercial_support_img]: https://cloudposse.com/readme/commercial-support/img
-  [readme_commercial_support_link]: https://cloudposse.com/readme/commercial-support/link?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/example-github-action-composite&utm_content=readme_commercial_support_link
-  [share_twitter]: https://twitter.com/intent/tweet/?text=example-github-action-composite&url=https://github.com/cloudposse/example-github-action-composite
-  [share_linkedin]: https://www.linkedin.com/shareArticle?mini=true&title=example-github-action-composite&url=https://github.com/cloudposse/example-github-action-composite
-  [share_reddit]: https://reddit.com/submit/?url=https://github.com/cloudposse/example-github-action-composite
-  [share_facebook]: https://facebook.com/sharer/sharer.php?u=https://github.com/cloudposse/example-github-action-composite
-  [share_googleplus]: https://plus.google.com/share?url=https://github.com/cloudposse/example-github-action-composite
-  [share_email]: mailto:?subject=example-github-action-composite&body=https://github.com/cloudposse/example-github-action-composite
-  [beacon]: https://ga-beacon.cloudposse.com/UA-76589703-4/cloudposse/example-github-action-composite?pixel&cs=github&cm=readme&an=example-github-action-composite
+  [readme_commercial_support_link]: https://cloudposse.com/readme/commercial-support/link?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-matrix-unlimited-jq-query&utm_content=readme_commercial_support_link
+  [share_twitter]: https://twitter.com/intent/tweet/?text=github-action-matrix-unlimited-jq-query&url=https://github.com/cloudposse/github-action-matrix-unlimited-jq-query
+  [share_linkedin]: https://www.linkedin.com/shareArticle?mini=true&title=github-action-matrix-unlimited-jq-query&url=https://github.com/cloudposse/github-action-matrix-unlimited-jq-query
+  [share_reddit]: https://reddit.com/submit/?url=https://github.com/cloudposse/github-action-matrix-unlimited-jq-query
+  [share_facebook]: https://facebook.com/sharer/sharer.php?u=https://github.com/cloudposse/github-action-matrix-unlimited-jq-query
+  [share_googleplus]: https://plus.google.com/share?url=https://github.com/cloudposse/github-action-matrix-unlimited-jq-query
+  [share_email]: mailto:?subject=github-action-matrix-unlimited-jq-query&body=https://github.com/cloudposse/github-action-matrix-unlimited-jq-query
+  [beacon]: https://ga-beacon.cloudposse.com/UA-76589703-4/cloudposse/github-action-matrix-unlimited-jq-query?pixel&cs=github&cm=readme&an=github-action-matrix-unlimited-jq-query
 <!-- markdownlint-restore -->
