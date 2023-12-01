@@ -35,21 +35,20 @@ jobs:
           compact: true
           input: | 
             [
-              {version: 10, os: ubuntu-latest, arch: amd64},
-              {version: 10, os: windows-latest, arch: amd64},
-              {version: 12, os: ubuntu-latest, arch: amd64},
-              {version: 12, os: windows-latest, arch: amd64},
-              {version: 14, os: ubuntu-latest, arch: amd64},
-              {version: 14, os: windows-latest, arch: amd64},
-              {version: 10, os: ubuntu-latest, arch: arm64},
-              {version: 10, os: windows-latest, arch: arm64},
-              {version: 12, os: ubuntu-latest, arch: arm64},
-              {version: 12, os: windows-latest, arch: arm64},
-              {version: 14, os: ubuntu-latest, arch: arm64},
-              {version: 14, os: windows-latest, arch: arm64}            
+              {"version": "10", "os": "ubuntu-latest", "arch": "amd64"},
+              {"version": "12", "os": "ubuntu-latest", "arch": "amd64"},
+              {"version": "14", "os": "ubuntu-latest", "arch": "amd64"},
+              {"version": "10", "os": "ubuntu-latest", "arch": "arm64"},
+              {"version": "12", "os": "ubuntu-latest", "arch": "arm64"},
+              {"version": "14", "os": "ubuntu-latest", "arch": "arm64"},
+              {"version": "10", "os": "windows-latest", "arch": "amd64"},
+              {"version": "12", "os": "windows-latest", "arch": "amd64"},
+              {"version": "14", "os": "windows-latest", "arch": "amd64"},
+              {"version": "10", "os": "windows-latest", "arch": "arm64"},
+              {"version": "12", "os": "windows-latest", "arch": "arm64"},
+              {"version": "14", "os": "windows-latest", "arch": "arm64"}            
             ]
-          script: |
-            ${{ steps.current.outputs.query }}
+          script: ${{ steps.current.outputs.query }}
 
     outputs:
       result: "${{ steps.current.outputs.query }}"
