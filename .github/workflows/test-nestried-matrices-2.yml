@@ -67,8 +67,8 @@ jobs:
         with:
           actual: ${{ needs.test.outputs.result }}
           expected: |
-            def name: .stack_slug;
-            def group: .stack_slug | split("-") | [.[0], .[2]] | join("-");
+            def name: [.version, .os, .arch] | join("-");
+            def group: .arch;
             
             def nestedMatricesLevelsAre(v): 2 == v; 
             
