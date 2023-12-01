@@ -24,7 +24,7 @@ outputs:
       def name: ${{ inputs.sort-by }};
       def group: ${{ inputs.group-by }};
       
-      def nestedMatricesLevelsAre(v): v == ${{ inputs.nested-matrices-count }}; 
+      def nestedMatricesLevelsAre(v): ${{ inputs.nested-matrices-count }} == v; 
       
       def chunk: .key / 256 | floor;
       def groupName: [(.value | group), (chunk | if . == 0 then empty else . end)] | join(" ");
