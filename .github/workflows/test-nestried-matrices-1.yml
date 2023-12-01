@@ -48,7 +48,8 @@ jobs:
               {version: 14, os: ubuntu-latest, arch: arm64},
               {version: 14, os: windows-latest, arch: arm64}            
             ]
-          script: ${{ steps.current.outputs.query }}
+          script: |
+            ${{ steps.current.outputs.query }}
 
     outputs:
       result: "${{ steps.current.outputs.query }}"
