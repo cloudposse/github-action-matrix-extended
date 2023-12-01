@@ -4,7 +4,7 @@ on:
 #  #
 #  # Added pull_request to register workflow from the PR.
 #  # Read more https://stackoverflow.com/questions/63362126/github-actions-how-to-run-a-workflow-created-on-a-non-master-branch-from-the-wo
-  pull_request: {}
+#  pull_request: {}
   workflow_dispatch: {}
 
 jobs:
@@ -25,41 +25,9 @@ jobs:
       - uses: ./
         id: current
         with:
-          stacks: |
-            [
-                {
-                    "stack": "core-ue2-auto",
-                    "component": "test-2",
-                    "stack_slug": "core-ue2-auto-test-2",
-                    "component_path": ""
-                },
-                {
-                    "stack": "core-ue2-auto",
-                    "component": "test-4",
-                    "stack_slug": "core-ue2-auto-test-4",
-                    "component_path": ""
-                },
-                {
-                    "stack": "core-ue2-auto",
-                    "component": "test-6",
-                    "stack_slug": "core-ue2-auto-test-6",
-                    "component_path": ""
-                },
-                {
-                    "stack": "plat-ue2-dev",
-                    "component": "test-4",
-                    "stack_slug": "plat-ue2-dev-test-4",
-                    "component_path": ""
-                },
-                {
-                    "stack": "plat-ue2-sandbox",
-                    "component": "test-5",
-                    "stack_slug": "plat-ue2-sandbox-test-5",
-                    "component_path": ""
-                }
-            ]
           sort-by: '.stack_slug'
           group-by: '.stack_slug | split("-") | [.[0], .[2]] | join("-")'
+          nested-matrices-count: '1'
 
     outputs:
       result: "${{ steps.current.outputs.result }}"
@@ -70,8 +38,52 @@ jobs:
     steps:
       - uses: nick-fields/assert-action@v1
         with:
-          expected: '{"include":[{"name":"core-auto","items":"{\"include\":[{\"stack\":\"core-ue2-auto\",\"component\":\"test-2\",\"stack_slug\":\"core-ue2-auto-test-2\",\"component_path\":\"\"},{\"stack\":\"core-ue2-auto\",\"component\":\"test-4\",\"stack_slug\":\"core-ue2-auto-test-4\",\"component_path\":\"\"},{\"stack\":\"core-ue2-auto\",\"component\":\"test-6\",\"stack_slug\":\"core-ue2-auto-test-6\",\"component_path\":\"\"}]}"},{"name":"plat-dev","items":"{\"include\":[{\"stack\":\"plat-ue2-dev\",\"component\":\"test-4\",\"stack_slug\":\"plat-ue2-dev-test-4\",\"component_path\":\"\"}]}"},{"name":"plat-sandbox","items":"{\"include\":[{\"stack\":\"plat-ue2-sandbox\",\"component\":\"test-5\",\"stack_slug\":\"plat-ue2-sandbox-test-5\",\"component_path\":\"\"}]}"}]}'
           actual: ${{ needs.test.outputs.result }}
+          expected: |
+            def name: .stack_slug;
+            def group: .stack_slug | split("-") | [.[0], .[2]] | join("-");
+            
+            def nestedMatricesLevelsAre(v): v == ( "1" | tonumber ); 
+            
+            def chunk: .key / 256 | floor;
+            def groupName: [(.value | group), (chunk | if . == 0 then empty else . end)] | join(" ");
+            def groupRange: [first, last] | map(.value | name) | join(" - ");
+            
+            def toGHAMatrix: {"include": . } ;
+            
+            def oneLevelMatrix: . ;
+            
+            def twoLevelMatrix: 
+                group_by(group) |
+                map( to_entries | group_by(chunk) | 
+                    map({
+                        "name": first | groupName,
+                        "items": map(.value) | toGHAMatrix | tostring
+                    })
+                ) | flatten;
+            
+            def threeLevelMatrix:
+                group_by(group) |
+                map({
+                  "name": first | group,
+                  "items": ( to_entries | group_by(chunk) | 
+                    map({
+                      "name": groupRange,
+                      "items": map(.value) | toGHAMatrix | tostring
+                    }) | toGHAMatrix | tostring
+                  )
+                });
+            
+            def groupingStrategy:
+                if nestedMatricesLevelsAre(3) then 
+                    threeLevelMatrix
+                elif nestedMatricesLevelsAre(2)  then 
+                    twoLevelMatrix 
+                else 
+                    oneLevelMatrix 
+                end; 
+            
+            sort_by(name) | groupingStrategy | toGHAMatrix
 
   teardown:
     runs-on: ubuntu-latest
