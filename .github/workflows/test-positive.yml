@@ -30,7 +30,7 @@ jobs:
           nested-matrices-count: '1'
 
     outputs:
-      result: "${{ steps.current.outputs.result }}"
+      result: "${{ steps.current.outputs.query }}"
 
   assert:
     runs-on: ubuntu-latest
