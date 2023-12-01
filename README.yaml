@@ -5,7 +5,7 @@
 #
 
 # Name of this project
-name: github-action-atmos-matrix-unlimited
+name: github-action-matrix-unlimited-jq-query
 
 # Tags of this project
 tags:
@@ -18,18 +18,21 @@ tags:
 license: "APACHE2"
 
 # Canonical GitHub repo
-github_repo: cloudposse/github-action-atmos-matrix-unlimited
+github_repo: cloudposse/github-action-matrix-unlimited-jq-query
 
 # Badges to display
 badges:
   - name: "Latest Release"
-    image: "https://img.shields.io/github/release/cloudposse/github-action-atmos-matrix-unlimited.svg"
-    url: "https://github.com/cloudposse/github-action-atmos-matrix-unlimited/releases/latest"
+    image: "https://img.shields.io/github/release/cloudposse/github-action-matrix-unlimited-jq-query.svg"
+    url: "https://github.com/cloudposse/github-action-matrix-unlimited-jq-query/releases/latest"
   - name: "Slack Community"
     image: "https://slack.cloudposse.com/badge.svg"
     url: "https://slack.cloudposse.com"
 
-related: []
+related:
+  - name: "Setup matrix"
+    description: "GitHub action to create reusable dynamic job matrices for your workflows."
+    url: "https://github.com/druzsan/setup-matrix"
 
 # Short description of this project
 description: GitHub Action to group list of Atmos stacks and split each group on chunks of 256 items.
@@ -37,30 +40,41 @@ description: GitHub Action to group list of Atmos stacks and split each group on
 introduction: |-
   GitHub Actions matrix have [limit to 256 items](https://docs.github.com/en/actions/using-jobs/using-a-matrix-for-your-jobs#using-a-matrix-strategy)
   There is workaround to extend the limit with [reusable workflows](https://github.com/orgs/community/discussions/38704)
-  This GitHub Action expect to have 2 nesting workflows levels.
-  In theory run 256 ^ 2 (i.e., 65536) jobs per workflow run!
+  This GitHub Action output query support up to 3 nested workflows levels.
+  In theory run 256 ^ 3 (i.e., 16 777 216) jobs per workflow run!
   
-  !!!!!Important!!!!!
-  Restrict concurrency to avoid DDOS GitHub Actions API and get restriction on your account.
+  | Matrix max nested level | Total jobs count limit   |
+  |-------------------------|--------------------------|
+  |         1               |            256           |
+  |         2               |           65 536         | 
+  |         3               |         16 777 216       |
   
-  | Matrix nested level | Concurrency |
-  |---------------------|-------------|
-  |         1           |       1     |
-  |         2           |       x     |
+  
+  > [!WARNING]  
+  > Restrict concurrency to avoid DDOS GitHub Actions API and get restriction on your account.
+  >
+  >   | Matrix max nested level | First Matrix Concurrency | Second Matrix Concurrency | Third Matrix Concurrency |
+  >   |-------------------------|--------------------------|---------------------------|--------------------------|
+  >   |         1               |            x             |              -            |             -            |
+  >   |         2               |            1             |              x            |             -            | 
+  >   |         3               |            1             |              1            |             x            |
+  >
 
 
 references:
-  - name: "github-actions-workflows"
-    description: "Reusable workflows for different types of projects"
-    url: "https://github.com/cloudposse/github-actions-workflows"
-  - name: "example-github-action-release-workflow"
-    description: "Example application with complicated release workflow"
-    url: "https://github.com/cloudposse/example-github-action-release-workflow"
+  - name: "github-action-atmos-affected-stacks"
+    description: "A composite workflow that runs the atmos describe affected command"
+    url: "https://github.com/cloudposse/github-action-atmos-affected-stacks"
 
 
 # How to use this project
 usage: |-
-  ### Matrix Level 1 - Iterate over account
+  The action have 3 modes depends of how many nested levels you want. 
+  The settings affect to reusable workflows count and usage pattern.
+  
+  ## 1 Level of nested matrices
+  
+  `.github/workflows/matrices-1.yml`
   
   ```yaml
     name: Pull Request
@@ -70,73 +84,238 @@ usage: |-
         types: [opened, synchronize, reopened, closed, labeled, unlabeled]
 
     jobs:
-      atmos-affected:
+      matrix-builder:
         runs-on: self-hosted
         name: Affected stacks
         outputs:
-          matrix: ${{ steps.components.outputs.output }}
+          matrix: ${{ steps.jq.outputs.output }}
         steps:
-          - uses: actions/checkout@v3
+          - id: setup-matrix
+            uses: druzsan/setup-matrix@v1
             with:
-              ref: ${{ github.event.pull_request.head.sha }}
-    
-          - id: affected
-            uses: cloudposse/github-action-atmos-affected-stacks@v1
-    
-          - id: matrix
-            uses: cloudposse/github-action-atmos-matrix-unlimited@main
-            with:              
-              input: ${{ toJson(fromJson(steps.affected.outputs.matrix).include) }}
-              sort-by: .stack_slug
-              group-by: .stack_slug | split("-") | [.[0], .[2]] | join("-")
+              matrix: |
+                os: ubuntu-latest windows-latest macos-latest,
+                python-version: 3.8 3.9 3.10
+                arch: arm64 amd64
+
+          - uses: cloudposse/github-action-matrix-unlimited-jq-query@main
+            id: query
+            with:
+              sort-by: '[.python-version, .os, .arch] | join("-")'
+              group-by: '.arch'
+              nested-matrices-count: '1'          
+
+          - id: jq
+            uses: cloudposse/github-action-jq@v0
+            with:
+              compact: true
+              input: ${{ steps.setup-matrix.outputs.matrix }}
+              script: ${{ steps.query.outputs.query }}
   
-      atmos-plan:
-        if: ${{ needs.atmos-affected.outputs.accounts != '{"include":[]}' }}
-        uses: ./.github/workflows/atmos-terraform-plan-account.yaml
+      operation:
+        if: ${{ needs.matrix-builder.outputs.matrix != '{"include":[]}' }}
         needs:
-          - atmos-affected
+          - matrix-builder
+        strategy:
+          max-parallel: 10
+          fail-fast: false # Don't fail fast to avoid locking TF State
+          matrix: ${{ fromJson(needs.matrix-builder.outputs.matrix) }}
+        name: Do (${{ matrix.arch }})
+        runs-on: self-hosted
+        steps:
+          - shell: bash
+            run: |
+              echo "Do real work - ${{ matrix.os }} - ${{ matrix.arch }} - ${{ matrix.python-version }}"
+  ```
+
+  ## 2 Level of nested matrices
+  
+  `.github/workflows/matrices-1.yml`
+  
+  ```yaml
+    name: Pull Request
+    on:
+      pull_request:
+        branches: [ 'main' ]
+        types: [opened, synchronize, reopened, closed, labeled, unlabeled]
+
+    jobs:
+      matrix-builder:
+        runs-on: self-hosted
+        name: Affected stacks
+        outputs:
+          matrix: ${{ steps.jq.outputs.output }}
+        steps:
+          - id: setup-matrix
+            uses: druzsan/setup-matrix@v1
+            with:
+              matrix: |
+                os: ubuntu-latest windows-latest macos-latest,
+                python-version: 3.8 3.9 3.10
+                arch: arm64 amd64
+
+          - uses: cloudposse/github-action-matrix-unlimited-jq-query@main
+            id: query
+            with:
+              sort-by: '[.python-version, .os, .arch] | join("-")'
+              group-by: '.arch'
+              nested-matrices-count: '1'          
+
+          - id: jq
+            uses: cloudposse/github-action-jq@v0
+            with:
+              compact: true
+              input: ${{ steps.setup-matrix.outputs.matrix }}
+              script: ${{ steps.query.outputs.query }}
+  
+      operation:
+        if: ${{ needs.matrix-builder.outputs.matrix != '{"include":[]}' }}
+        uses: ./.github/workflows/matrices-2.yml
+        needs:
+          - matrix-builder
         strategy:
           max-parallel: 1 # This is important to avoid ddos GHA API
           fail-fast: false # Don't fail fast to avoid locking TF State
-          matrix: ${{ fromJson(needs.atmos-affected.outputs.matrix) }}
-        name: Plan (${{ matrix.name }})
+          matrix: ${{ fromJson(needs.matrix-builder.outputs.matrix) }}
+        name: Group (${{ matrix.name }})
         with:
-          stacks: ${{ matrix.items }}
+          items: ${{ matrix.items }}
   ```
-  
-  ### Matrix Level 2 - Do real work
+
+  `.github/workflows/matrices-2.yml`
   
   ```yaml
-    # ./.github/workflows/atmos-terraform-plan-account.yaml
+    name: Reusable workflow for 2 level of nested matrices
     on:
       workflow_call:
         inputs:
-          stacks:
-            description: "Stacks"
+          items:
+            description: "Items"
             required: true
             type: string
 
     jobs:
-      atmos-plan:
-        if: ${{ inputs.stacks != '{include:[]}' }}
+      operation:
+        if: ${{ inputs.items != '{"include":[]}' }}
         strategy:
           max-parallel: 10
           fail-fast: false # Don't fail fast to avoid locking TF State
-          matrix: ${{ fromJson(inputs.stacks) }}
-        ## Avoid running the same stack in parallel mode (from different workflows)
-        concurrency:
-          group: ${{ matrix.stack_slug }}
-          cancel-in-progress: false
-        name: ${{ matrix.stack_slug }}
+          matrix: ${{ fromJson(inputs.items) }}
+        name: Do (${{ matrix.arch }})
+        runs-on: self-hosted
         steps:
-          - name: Plan Atmos Component
-            uses: cloudposse/github-action-atmos-terraform-plan@v0
+          - shell: bash
+            run: |
+              echo "Do real work - ${{ matrix.os }} - ${{ matrix.arch }} - ${{ matrix.python-version }}"
+  ```
+  
+  
+  ## 3 Level of nested matrices
+  
+  `.github/workflows/matrices-1.yml`
+  
+  ```yaml
+    name: Pull Request
+    on:
+      pull_request:
+        branches: [ 'main' ]
+        types: [opened, synchronize, reopened, closed, labeled, unlabeled]
+
+    jobs:
+      matrix-builder:
+        runs-on: self-hosted
+        name: Affected stacks
+        outputs:
+          matrix: ${{ steps.jq.outputs.output }}
+        steps:
+          - id: setup-matrix
+            uses: druzsan/setup-matrix@v1
             with:
-              component: ${{ matrix.component }}
-              stack: ${{ matrix.stack }}
-              component-path: ${{ matrix.component_path }}
+              matrix: |
+                os: ubuntu-latest windows-latest macos-latest,
+                python-version: 3.8 3.9 3.10
+                arch: arm64 amd64
+
+          - uses: cloudposse/github-action-matrix-unlimited-jq-query@main
+            id: query
+            with:
+              sort-by: '[.python-version, .os, .arch] | join("-")'
+              group-by: '.arch'
+              nested-matrices-count: '1'          
+
+          - id: jq
+            uses: cloudposse/github-action-jq@v0
+            with:
+              compact: true
+              input: ${{ steps.setup-matrix.outputs.matrix }}
+              script: ${{ steps.query.outputs.query }}
+  
+      operation:
+        if: ${{ needs.matrix-builder.outputs.matrix != '{"include":[]}' }}
+        uses: ./.github/workflows/matrices-2.yml
+        needs:
+          - matrix-builder
+        strategy:
+          max-parallel: 1 # This is important to avoid ddos GHA API
+          fail-fast: false # Don't fail fast to avoid locking TF State
+          matrix: ${{ fromJson(needs.matrix-builder.outputs.matrix) }}
+        name: Group (${{ matrix.name }})
+        with:
+          items: ${{ matrix.items }}
   ```
 
+  `.github/workflows/matrices-2.yml`
+  
+  ```yaml
+    name: Reusable workflow for 2 level of nested matrices
+    on:
+      workflow_call:
+        inputs:
+          items:
+            description: "Items"
+            required: true
+            type: string
+
+    jobs:
+      operation:
+        if: ${{ inputs.items != '{"include":[]}' }}
+        uses: ./.github/workflows/matrices-3.yml
+        strategy:
+          max-parallel: 1 # This is important to avoid ddos GHA API
+          fail-fast: false # Don't fail fast to avoid locking TF State
+          matrix: ${{ fromJson(inputs.items) }}
+        name: Group (${{ matrix.name }})
+        with:
+          items: ${{ matrix.items }}
+  ```
+
+
+  `.github/workflows/matrices-3.yml`
+  
+  ```yaml
+    name: Reusable workflow for 3 level of nested matrices
+    on:
+      workflow_call:
+        inputs:
+          items:
+            description: "Items"
+            required: true
+            type: string
+
+    jobs:
+      operation:
+        if: ${{ inputs.items != '{"include":[]}' }}
+        strategy:
+          max-parallel: 10
+          fail-fast: false # Don't fail fast to avoid locking TF State
+          matrix: ${{ fromJson(inputs.items) }}
+        name: Do (${{ matrix.arch }})
+        runs-on: self-hosted
+        steps:
+          - shell: bash
+            run: |
+              echo "Do real work - ${{ matrix.os }} - ${{ matrix.arch }} - ${{ matrix.python-version }}"
+  ```
 
 include:
   - "docs/github-action.md"

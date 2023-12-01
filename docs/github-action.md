@@ -4,12 +4,14 @@
 
 | Name | Description | Default | Required |
 |------|-------------|---------|----------|
-| param1 | Input parameter placeholder | true | true |
+| group-by | Group by query | empty | false |
+| nested-matrices-count | Matrices nested levels count (from 1 to 3) | 1 | false |
+| sort-by | Sort by query | empty | false |
 
 
 ## Outputs
 
 | Name | Description |
 |------|-------------|
-| result1 | Output result placeholder |
+| query | Matrix unlimited JQ query |
 <!-- markdownlint-restore -->
