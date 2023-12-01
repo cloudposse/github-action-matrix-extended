@@ -5,7 +5,7 @@
 #
 
 # Name of this project
-name: example-github-action-composite
+name: github-action-atmos-matrix-unlimited
 
 # Tags of this project
 tags:
@@ -18,13 +18,13 @@ tags:
 license: "APACHE2"
 
 # Canonical GitHub repo
-github_repo: cloudposse/example-github-action-composite
+github_repo: cloudposse/github-action-atmos-matrix-unlimited
 
 # Badges to display
 badges:
   - name: "Latest Release"
-    image: "https://img.shields.io/github/release/cloudposse/example-github-action-composite.svg"
-    url: "https://github.com/cloudposse/example-github-action-composite/releases/latest"
+    image: "https://img.shields.io/github/release/cloudposse/github-action-atmos-matrix-unlimited.svg"
+    url: "https://github.com/cloudposse/github-action-atmos-matrix-unlimited/releases/latest"
   - name: "Slack Community"
     image: "https://slack.cloudposse.com/badge.svg"
     url: "https://slack.cloudposse.com"
@@ -32,11 +32,22 @@ badges:
 related: []
 
 # Short description of this project
-description: Template repository of composite GitHub Action
+description: GitHub Action to group list of Atmos stacks and split each group on chunks of 256 items.
 
 introduction: |-
-  This is template repository to create composite GitHub Actions. 
-  Feel free to use it as reference and starting point.
+  GitHub Actions matrix have [limit to 256 items](https://docs.github.com/en/actions/using-jobs/using-a-matrix-for-your-jobs#using-a-matrix-strategy)
+  There is workaround to extend the limit with [reusable workflows](https://github.com/orgs/community/discussions/38704)
+  This GitHub Action expect to have 2 nesting workflows levels.
+  In theory run 256 ^ 2 (i.e., 65536) jobs per workflow run!
+  
+  !!!!!Important!!!!!
+  Restrict concurrency to avoid DDOS GitHub Actions API and get restriction on your account.
+  
+  | Matrix nested level | Concurrency |
+  |---------------------|-------------|
+  |         1           |       1     |
+  |         2           |       x     |
+
 
 references:
   - name: "github-actions-workflows"
@@ -46,8 +57,11 @@ references:
     description: "Example application with complicated release workflow"
     url: "https://github.com/cloudposse/example-github-action-release-workflow"
 
+
 # How to use this project
 usage: |-
+  ### Matrix Level 1 - Iterate over account
+  
   ```yaml
     name: Pull Request
     on:
@@ -56,18 +70,73 @@ usage: |-
         types: [opened, synchronize, reopened, closed, labeled, unlabeled]
 
     jobs:
-      context:
-        runs-on: ubuntu-latest
-        steps:
-          - name: Example action
-            uses: cloudposse/example-github-action-composite@main
-            id: example
-            with:
-              param1: true
-  
+      atmos-affected:
+        runs-on: self-hosted
+        name: Affected stacks
         outputs:
-          result: ${{ steps.example.outputs.result1 }}
+          matrix: ${{ steps.components.outputs.output }}
+        steps:
+          - uses: actions/checkout@v3
+            with:
+              ref: ${{ github.event.pull_request.head.sha }}
+    
+          - id: affected
+            uses: cloudposse/github-action-atmos-affected-stacks@v1
+    
+          - id: matrix
+            uses: cloudposse/github-action-atmos-matrix-unlimited@main
+            with:              
+              input: ${{ toJson(fromJson(steps.affected.outputs.matrix).include) }}
+              sort-by: .stack_slug
+              group-by: .stack_slug | split("-") | [.[0], .[2]] | join("-")
+  
+      atmos-plan:
+        if: ${{ needs.atmos-affected.outputs.accounts != '{"include":[]}' }}
+        uses: ./.github/workflows/atmos-terraform-plan-account.yaml
+        needs:
+          - atmos-affected
+        strategy:
+          max-parallel: 1 # This is important to avoid ddos GHA API
+          fail-fast: false # Don't fail fast to avoid locking TF State
+          matrix: ${{ fromJson(needs.atmos-affected.outputs.matrix) }}
+        name: Plan (${{ matrix.name }})
+        with:
+          stacks: ${{ matrix.items }}
   ```
+  
+  ### Matrix Level 2 - Do real work
+  
+  ```yaml
+    # ./.github/workflows/atmos-terraform-plan-account.yaml
+    on:
+      workflow_call:
+        inputs:
+          stacks:
+            description: "Stacks"
+            required: true
+            type: string
+
+    jobs:
+      atmos-plan:
+        if: ${{ inputs.stacks != '{include:[]}' }}
+        strategy:
+          max-parallel: 10
+          fail-fast: false # Don't fail fast to avoid locking TF State
+          matrix: ${{ fromJson(inputs.stacks) }}
+        ## Avoid running the same stack in parallel mode (from different workflows)
+        concurrency:
+          group: ${{ matrix.stack_slug }}
+          cancel-in-progress: false
+        name: ${{ matrix.stack_slug }}
+        steps:
+          - name: Plan Atmos Component
+            uses: cloudposse/github-action-atmos-terraform-plan@v0
+            with:
+              component: ${{ matrix.component }}
+              stack: ${{ matrix.stack }}
+              component-path: ${{ matrix.component_path }}
+  ```
+
 
 include:
   - "docs/github-action.md"

@@ -1,23 +1,70 @@
-name: 'Example composite GitHub action'
-description: 'Example composite GitHub action'
+name: 'Matrix unlimited JQ query'
+description: 'Get JQ query to group matrix includes to use with reusable workflows workaround to extend matrix size limit'
 author: hello@cloudposse.com
 branding:
-  icon: 'file'
+  icon: 'wind'
   color: 'white'
 inputs:
-  param1:
-    required: true
-    description: "Input parameter placeholder"
-    default: "true"
+  sort-by:
+    required: false
+    description: 'Sort by query'
+    default: 'empty'
+  group-by:
+    required: false
+    description: 'Group by query'
+    default: 'empty'
+  nested-matrices-count:
+    required: false
+    description: 'Matrices nested levels count (from 1 to 3)'
+    default: "1"
 outputs:
-  result1:
-    description: "Output result placeholder"
-    value: "${{ steps.context.outputs.action-result }}"
+  query:
+    description: "Matrix unlimited JQ query"
+    value: |
+      def name: ${{ inputs.sort-by }};
+      def group: ${{ inputs.group-by }};
+      
+      def nestedMatricesLevelsAre(v): v == ( "${{ inputs.nested-matrices-count }}" | tonumber ); 
+      
+      def chunk: .key / 256 | floor;
+      def groupName: [(.value | group), (chunk | if . == 0 then empty else . end)] | join(" ");
+      def groupRange: [first, last] | map(.value | name) | join(" - ");
+      
+      def toGHAMatrix: {"include": . } ;
+      
+      def oneLevelMatrix: . ;
+      
+      def twoLevelMatrix: 
+          group_by(group) |
+          map( to_entries | group_by(chunk) | 
+              map({
+                  "name": first | groupName,
+                  "items": map(.value) | toGHAMatrix | tostring
+              })
+          ) | flatten;
+      
+      def threeLevelMatrix:
+          group_by(group) |
+          map({
+            "name": first | group,
+            "items": ( to_entries | group_by(chunk) | 
+              map({
+                "name": groupRange,
+                "items": map(.value) | toGHAMatrix | tostring
+              }) | toGHAMatrix | tostring
+            )
+          });
+      
+      def groupingStrategy:
+          if nestedMatricesLevelsAre(3) then 
+              threeLevelMatrix
+          elif nestedMatricesLevelsAre(2)  then 
+              twoLevelMatrix 
+          else 
+              oneLevelMatrix 
+          end; 
+      
+      sort_by(name) | groupingStrategy | toGHAMatrix
 runs:
   using: "composite"
-  steps:
-    - id: context
-      shell: bash
-      run: |
-          echo "action-result=${{ inputs.param1 }}" >> $GITHUB_OUTPUT
-
+  steps: []

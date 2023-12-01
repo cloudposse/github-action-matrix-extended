@@ -25,10 +25,44 @@ jobs:
       - uses: ./
         id: current
         with:
-          param1: 'true'
+          stacks: |
+            [
+                {
+                    "stack": "core-ue2-auto",
+                    "component": "test-2",
+                    "stack_slug": "core-ue2-auto-test-2",
+                    "component_path": ""
+                },
+                {
+                    "stack": "core-ue2-auto",
+                    "component": "test-4",
+                    "stack_slug": "core-ue2-auto-test-4",
+                    "component_path": ""
+                },
+                {
+                    "stack": "core-ue2-auto",
+                    "component": "test-6",
+                    "stack_slug": "core-ue2-auto-test-6",
+                    "component_path": ""
+                },
+                {
+                    "stack": "plat-ue2-dev",
+                    "component": "test-4",
+                    "stack_slug": "plat-ue2-dev-test-4",
+                    "component_path": ""
+                },
+                {
+                    "stack": "plat-ue2-sandbox",
+                    "component": "test-5",
+                    "stack_slug": "plat-ue2-sandbox-test-5",
+                    "component_path": ""
+                }
+            ]
+          sort-by: '.stack_slug'
+          group-by: '.stack_slug | split("-") | [.[0], .[2]] | join("-")'
 
     outputs:
-      result: "${{ steps.current.outputs.result1 }}"
+      result: "${{ steps.current.outputs.result }}"
 
   assert:
     runs-on: ubuntu-latest
@@ -36,8 +70,8 @@ jobs:
     steps:
       - uses: nick-fields/assert-action@v1
         with:
-          expected: 'true'
-          actual: "${{ needs.test.outputs.result }}"
+          expected: '{"include":[{"name":"core-auto","items":"{\"include\":[{\"stack\":\"core-ue2-auto\",\"component\":\"test-2\",\"stack_slug\":\"core-ue2-auto-test-2\",\"component_path\":\"\"},{\"stack\":\"core-ue2-auto\",\"component\":\"test-4\",\"stack_slug\":\"core-ue2-auto-test-4\",\"component_path\":\"\"},{\"stack\":\"core-ue2-auto\",\"component\":\"test-6\",\"stack_slug\":\"core-ue2-auto-test-6\",\"component_path\":\"\"}]}"},{"name":"plat-dev","items":"{\"include\":[{\"stack\":\"plat-ue2-dev\",\"component\":\"test-4\",\"stack_slug\":\"plat-ue2-dev-test-4\",\"component_path\":\"\"}]}"},{"name":"plat-sandbox","items":"{\"include\":[{\"stack\":\"plat-ue2-sandbox\",\"component\":\"test-5\",\"stack_slug\":\"plat-ue2-sandbox-test-5\",\"component_path\":\"\"}]}"}]}'
+          actual: ${{ needs.test.outputs.result }}
 
   teardown:
     runs-on: ubuntu-latest
