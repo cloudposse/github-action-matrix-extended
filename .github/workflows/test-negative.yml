@@ -39,7 +39,7 @@ jobs:
             def name: empty;
             def group: empty;
             
-            def nestedMatricesLevelsAre(v): v == ( "1" | tonumber ); 
+            def nestedMatricesLevelsAre(v): 1 == v; 
             
             def chunk: .key / 256 | floor;
             def groupName: [(.value | group), (chunk | if . == 0 then empty else . end)] | join(" ");

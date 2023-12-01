@@ -70,7 +70,7 @@ jobs:
             def name: .stack_slug;
             def group: .stack_slug | split("-") | [.[0], .[2]] | join("-");
             
-            def nestedMatricesLevelsAre(v): v == ( "1" | tonumber ); 
+            def nestedMatricesLevelsAre(v): 1 == v; 
             
             def chunk: .key / 256 | floor;
             def groupName: [(.value | group), (chunk | if . == 0 then empty else . end)] | join(" ");
