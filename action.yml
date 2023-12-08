@@ -7,7 +7,7 @@ branding:
 inputs:
   matrix:
     required: true
-    description: 'Matrix inputs'
+    description: 'Matrix inputs (json array or object with include property passed as string or file path)'
   sort-by:
     required: false
     description: 'Sort by query'
