@@ -75,5 +75,8 @@ runs:
               else 
                   oneLevelMatrix 
               end; 
+
+          def parseInput:
+              if type == "array" then . else .include end;
           
-          sort_by(name) | groupingStrategy | toGHAMatrix
+          parseInput | sort_by(name) | groupingStrategy | toGHAMatrix
