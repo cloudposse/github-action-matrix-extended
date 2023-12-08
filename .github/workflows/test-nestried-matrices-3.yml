@@ -28,7 +28,7 @@ jobs:
           sort-by: '[.version, .os, .arch] | join("-")'
           group-by: '.arch'
           nested-matrices-count: '3'
-          input: |
+          matrix: |
             [
               {"version": "10", "os": "ubuntu-latest", "arch": "amd64"},
               {"version": "12", "os": "ubuntu-latest", "arch": "amd64"},
