@@ -1,5 +1,5 @@
-name: 'Matrix unlimited JQ query'
-description: 'Get JQ query to group matrix includes to use with reusable workflows workaround to extend matrix size limit'
+name: 'Matrix extended'
+description: 'Extend GHA matrix limit with reusable workflows and nested matrices workaround'
 author: hello@cloudposse.com
 branding:
   icon: 'wind'
