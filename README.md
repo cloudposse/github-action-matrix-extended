@@ -1,8 +1,8 @@
 
 <!-- markdownlint-disable -->
-# github-action-matrix-unlimited-jq-query
+# github-action-matrix-extended
 
- [![Latest Release](https://img.shields.io/github/release/cloudposse/github-action-matrix-unlimited-jq-query.svg)](https://github.com/cloudposse/github-action-matrix-unlimited-jq-query/releases/latest) [![Slack Community](https://slack.cloudposse.com/badge.svg)](https://slack.cloudposse.com)
+ [![Latest Release](https://img.shields.io/github/release/cloudposse/github-action-matrix-extended.svg)](https://github.com/cloudposse/github-action-matrix-extended/releases/latest) [![Slack Community](https://slack.cloudposse.com/badge.svg)](https://slack.cloudposse.com)
 <!-- markdownlint-restore -->
 
 [![README Header][readme_header_img]][readme_header_link]
@@ -119,7 +119,7 @@ The settings affect to reusable workflows count and usage pattern.
               python-version: 3.8 3.9 3.10
               arch: arm64 amd64
 
-        - uses: cloudposse/github-action-matrix-unlimited-jq-query@main
+        - uses: cloudposse/github-action-matrix-extended@main
           id: query
           with:
             sort-by: '[.python-version, .os, .arch] | join("-")'
@@ -175,7 +175,7 @@ The settings affect to reusable workflows count and usage pattern.
               python-version: 3.8 3.9 3.10
               arch: arm64 amd64
 
-        - uses: cloudposse/github-action-matrix-unlimited-jq-query@main
+        - uses: cloudposse/github-action-matrix-extended@main
           id: query
           with:
             sort-by: '[.python-version, .os, .arch] | join("-")'
@@ -257,7 +257,7 @@ The settings affect to reusable workflows count and usage pattern.
               python-version: 3.8 3.9 3.10
               arch: arm64 amd64
 
-        - uses: cloudposse/github-action-matrix-unlimited-jq-query@main
+        - uses: cloudposse/github-action-matrix-extended@main
           id: query
           with:
             sort-by: '[.python-version, .os, .arch] | join("-")'
@@ -365,7 +365,7 @@ The settings affect to reusable workflows count and usage pattern.
 
 ## Share the Love
 
-Like this project? Please give it a ★ on [our GitHub](https://github.com/cloudposse/github-action-matrix-unlimited-jq-query)! (it helps us **a lot**)
+Like this project? Please give it a ★ on [our GitHub](https://github.com/cloudposse/github-action-matrix-extended)! (it helps us **a lot**)
 
 Are you using this project or any of our other projects? Consider [leaving a testimonial][testimonial]. =)
 
@@ -389,7 +389,7 @@ For additional context, refer to some of these links.
 
 **Got a question?** We got answers.
 
-File a GitHub [issue](https://github.com/cloudposse/github-action-matrix-unlimited-jq-query/issues), send us an [email][email] or join our [Slack Community][slack].
+File a GitHub [issue](https://github.com/cloudposse/github-action-matrix-extended/issues), send us an [email][email] or join our [Slack Community][slack].
 
 [![README Commercial Support][readme_commercial_support_img]][readme_commercial_support_link]
 
@@ -437,7 +437,7 @@ Sign up for [our newsletter][newsletter] that covers everything on our technolog
 
 ### Bug Reports & Feature Requests
 
-Please use the [issue tracker](https://github.com/cloudposse/github-action-matrix-unlimited-jq-query/issues) to report any bugs or file feature requests.
+Please use the [issue tracker](https://github.com/cloudposse/github-action-matrix-extended/issues) to report any bugs or file feature requests.
 
 ### Developing
 
@@ -525,33 +525,33 @@ Check out [our other projects][github], [follow us on twitter][twitter], [apply 
 [![Beacon][beacon]][website]
 <!-- markdownlint-disable -->
   [logo]: https://cloudposse.com/logo-300x69.svg
-  [docs]: https://cpco.io/docs?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-matrix-unlimited-jq-query&utm_content=docs
-  [website]: https://cpco.io/homepage?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-matrix-unlimited-jq-query&utm_content=website
-  [github]: https://cpco.io/github?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-matrix-unlimited-jq-query&utm_content=github
-  [jobs]: https://cpco.io/jobs?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-matrix-unlimited-jq-query&utm_content=jobs
-  [hire]: https://cpco.io/hire?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-matrix-unlimited-jq-query&utm_content=hire
-  [slack]: https://cpco.io/slack?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-matrix-unlimited-jq-query&utm_content=slack
-  [linkedin]: https://cpco.io/linkedin?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-matrix-unlimited-jq-query&utm_content=linkedin
-  [twitter]: https://cpco.io/twitter?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-matrix-unlimited-jq-query&utm_content=twitter
-  [testimonial]: https://cpco.io/leave-testimonial?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-matrix-unlimited-jq-query&utm_content=testimonial
-  [office_hours]: https://cloudposse.com/office-hours?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-matrix-unlimited-jq-query&utm_content=office_hours
-  [newsletter]: https://cpco.io/newsletter?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-matrix-unlimited-jq-query&utm_content=newsletter
-  [discourse]: https://ask.sweetops.com/?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-matrix-unlimited-jq-query&utm_content=discourse
-  [email]: https://cpco.io/email?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-matrix-unlimited-jq-query&utm_content=email
-  [commercial_support]: https://cpco.io/commercial-support?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-matrix-unlimited-jq-query&utm_content=commercial_support
-  [we_love_open_source]: https://cpco.io/we-love-open-source?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-matrix-unlimited-jq-query&utm_content=we_love_open_source
-  [terraform_modules]: https://cpco.io/terraform-modules?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-matrix-unlimited-jq-query&utm_content=terraform_modules
+  [docs]: https://cpco.io/docs?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-matrix-extended&utm_content=docs
+  [website]: https://cpco.io/homepage?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-matrix-extended&utm_content=website
+  [github]: https://cpco.io/github?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-matrix-extended&utm_content=github
+  [jobs]: https://cpco.io/jobs?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-matrix-extended&utm_content=jobs
+  [hire]: https://cpco.io/hire?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-matrix-extended&utm_content=hire
+  [slack]: https://cpco.io/slack?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-matrix-extended&utm_content=slack
+  [linkedin]: https://cpco.io/linkedin?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-matrix-extended&utm_content=linkedin
+  [twitter]: https://cpco.io/twitter?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-matrix-extended&utm_content=twitter
+  [testimonial]: https://cpco.io/leave-testimonial?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-matrix-extended&utm_content=testimonial
+  [office_hours]: https://cloudposse.com/office-hours?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-matrix-extended&utm_content=office_hours
+  [newsletter]: https://cpco.io/newsletter?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-matrix-extended&utm_content=newsletter
+  [discourse]: https://ask.sweetops.com/?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-matrix-extended&utm_content=discourse
+  [email]: https://cpco.io/email?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-matrix-extended&utm_content=email
+  [commercial_support]: https://cpco.io/commercial-support?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-matrix-extended&utm_content=commercial_support
+  [we_love_open_source]: https://cpco.io/we-love-open-source?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-matrix-extended&utm_content=we_love_open_source
+  [terraform_modules]: https://cpco.io/terraform-modules?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-matrix-extended&utm_content=terraform_modules
   [readme_header_img]: https://cloudposse.com/readme/header/img
-  [readme_header_link]: https://cloudposse.com/readme/header/link?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-matrix-unlimited-jq-query&utm_content=readme_header_link
+  [readme_header_link]: https://cloudposse.com/readme/header/link?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-matrix-extended&utm_content=readme_header_link
   [readme_footer_img]: https://cloudposse.com/readme/footer/img
-  [readme_footer_link]: https://cloudposse.com/readme/footer/link?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-matrix-unlimited-jq-query&utm_content=readme_footer_link
+  [readme_footer_link]: https://cloudposse.com/readme/footer/link?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-matrix-extended&utm_content=readme_footer_link
   [readme_commercial_support_img]: https://cloudposse.com/readme/commercial-support/img
-  [readme_commercial_support_link]: https://cloudposse.com/readme/commercial-support/link?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-matrix-unlimited-jq-query&utm_content=readme_commercial_support_link
-  [share_twitter]: https://twitter.com/intent/tweet/?text=github-action-matrix-unlimited-jq-query&url=https://github.com/cloudposse/github-action-matrix-unlimited-jq-query
-  [share_linkedin]: https://www.linkedin.com/shareArticle?mini=true&title=github-action-matrix-unlimited-jq-query&url=https://github.com/cloudposse/github-action-matrix-unlimited-jq-query
-  [share_reddit]: https://reddit.com/submit/?url=https://github.com/cloudposse/github-action-matrix-unlimited-jq-query
-  [share_facebook]: https://facebook.com/sharer/sharer.php?u=https://github.com/cloudposse/github-action-matrix-unlimited-jq-query
-  [share_googleplus]: https://plus.google.com/share?url=https://github.com/cloudposse/github-action-matrix-unlimited-jq-query
-  [share_email]: mailto:?subject=github-action-matrix-unlimited-jq-query&body=https://github.com/cloudposse/github-action-matrix-unlimited-jq-query
-  [beacon]: https://ga-beacon.cloudposse.com/UA-76589703-4/cloudposse/github-action-matrix-unlimited-jq-query?pixel&cs=github&cm=readme&an=github-action-matrix-unlimited-jq-query
+  [readme_commercial_support_link]: https://cloudposse.com/readme/commercial-support/link?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-matrix-extended&utm_content=readme_commercial_support_link
+  [share_twitter]: https://twitter.com/intent/tweet/?text=github-action-matrix-extended&url=https://github.com/cloudposse/github-action-matrix-extended
+  [share_linkedin]: https://www.linkedin.com/shareArticle?mini=true&title=github-action-matrix-extended&url=https://github.com/cloudposse/github-action-matrix-extended
+  [share_reddit]: https://reddit.com/submit/?url=https://github.com/cloudposse/github-action-matrix-extended
+  [share_facebook]: https://facebook.com/sharer/sharer.php?u=https://github.com/cloudposse/github-action-matrix-extended
+  [share_googleplus]: https://plus.google.com/share?url=https://github.com/cloudposse/github-action-matrix-extended
+  [share_email]: mailto:?subject=github-action-matrix-extended&body=https://github.com/cloudposse/github-action-matrix-extended
+  [beacon]: https://ga-beacon.cloudposse.com/UA-76589703-4/cloudposse/github-action-matrix-extended?pixel&cs=github&cm=readme&an=github-action-matrix-extended
 <!-- markdownlint-restore -->

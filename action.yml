@@ -5,6 +5,9 @@ branding:
   icon: 'wind'
   color: 'white'
 inputs:
+  matrix:
+    required: true
+    description: 'Matrix inputs'
   sort-by:
     required: false
     description: 'Sort by query'
@@ -18,53 +21,59 @@ inputs:
     description: 'Matrices nested levels count (from 1 to 3)'
     default: "1"
 outputs:
-  query:
-    description: "Matrix unlimited JQ query"
-    value: |
-      def name: ${{ inputs.sort-by }};
-      def group: ${{ inputs.group-by }};
-      
-      def nestedMatricesLevelsAre(v): ${{ inputs.nested-matrices-count }} == v; 
-      
-      def chunk: .key / 256 | floor;
-      def groupName: [(.value | group), (chunk | if . == 0 then empty else . end)] | join(" ");
-      def groupRange: [first, last] | map(.value | name) | join(" - ");
-      
-      def toGHAMatrix: {"include": . } ;
-      
-      def oneLevelMatrix: . ;
-      
-      def twoLevelMatrix: 
-          group_by(group) |
-          map( to_entries | group_by(chunk) | 
-              map({
-                  "name": first | groupName,
-                  "items": map(.value) | toGHAMatrix | tostring
-              })
-          ) | flatten;
-      
-      def threeLevelMatrix:
-          group_by(group) |
-          map({
-            "name": first | group,
-            "items": ( to_entries | group_by(chunk) | 
-              map({
-                "name": groupRange,
-                "items": map(.value) | toGHAMatrix | tostring
-              }) | toGHAMatrix | tostring
-            )
-          });
-      
-      def groupingStrategy:
-          if nestedMatricesLevelsAre(3) then 
-              threeLevelMatrix
-          elif nestedMatricesLevelsAre(2)  then 
-              twoLevelMatrix 
-          else 
-              oneLevelMatrix 
-          end; 
-      
-      sort_by(name) | groupingStrategy | toGHAMatrix
+  matrix:
+    description: A matrix suitable for extending matrix size workaround
+    value: ${{ steps.matrix.outputs.output }}
 runs:
   using: "composite"
-  steps: []
+  steps:
+    - id: matrix
+      uses: cloudposse/github-action-jq@v0
+      with:
+        compact: true
+        input: ${{ inputs.matrix }}
+        script: |
+          def name: ${{ inputs.sort-by }};
+          def group: ${{ inputs.group-by }};
+          
+          def nestedMatricesLevelsAre(v): ${{ inputs.nested-matrices-count }} == v; 
+          
+          def chunk: .key / 256 | floor;
+          def groupName: [(.value | group), (chunk | if . == 0 then empty else . end)] | join(" ");
+          def groupRange: [first, last] | map(.value | name) | join(" - ");
+          
+          def toGHAMatrix: {"include": . } ;
+          
+          def oneLevelMatrix: . ;
+          
+          def twoLevelMatrix: 
+              group_by(group) |
+              map( to_entries | group_by(chunk) | 
+                  map({
+                      "name": first | groupName,
+                      "items": map(.value) | toGHAMatrix | tostring
+                  })
+              ) | flatten;
+          
+          def threeLevelMatrix:
+              group_by(group) |
+              map({
+                "name": first | group,
+                "items": ( to_entries | group_by(chunk) | 
+                  map({
+                    "name": groupRange,
+                    "items": map(.value) | toGHAMatrix | tostring
+                  }) | toGHAMatrix | tostring
+                )
+              });
+          
+          def groupingStrategy:
+              if nestedMatricesLevelsAre(3) then 
+                  threeLevelMatrix
+              elif nestedMatricesLevelsAre(2)  then 
+                  twoLevelMatrix 
+              else 
+                  oneLevelMatrix 
+              end; 
+          
+          sort_by(name) | groupingStrategy | toGHAMatrix

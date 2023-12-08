@@ -5,7 +5,7 @@
 #
 
 # Name of this project
-name: github-action-matrix-unlimited-jq-query
+name: github-action-matrix-extended
 
 # Tags of this project
 tags:
@@ -18,13 +18,13 @@ tags:
 license: "APACHE2"
 
 # Canonical GitHub repo
-github_repo: cloudposse/github-action-matrix-unlimited-jq-query
+github_repo: cloudposse/github-action-matrix-extended
 
 # Badges to display
 badges:
   - name: "Latest Release"
-    image: "https://img.shields.io/github/release/cloudposse/github-action-matrix-unlimited-jq-query.svg"
-    url: "https://github.com/cloudposse/github-action-matrix-unlimited-jq-query/releases/latest"
+    image: "https://img.shields.io/github/release/cloudposse/github-action-matrix-extended.svg"
+    url: "https://github.com/cloudposse/github-action-matrix-extended/releases/latest"
   - name: "Slack Community"
     image: "https://slack.cloudposse.com/badge.svg"
     url: "https://slack.cloudposse.com"
@@ -98,7 +98,7 @@ usage: |-
                 python-version: 3.8 3.9 3.10
                 arch: arm64 amd64
 
-          - uses: cloudposse/github-action-matrix-unlimited-jq-query@main
+          - uses: cloudposse/github-action-matrix-extended@main
             id: query
             with:
               sort-by: '[.python-version, .os, .arch] | join("-")'
@@ -154,7 +154,7 @@ usage: |-
                 python-version: 3.8 3.9 3.10
                 arch: arm64 amd64
 
-          - uses: cloudposse/github-action-matrix-unlimited-jq-query@main
+          - uses: cloudposse/github-action-matrix-extended@main
             id: query
             with:
               sort-by: '[.python-version, .os, .arch] | join("-")'
@@ -236,7 +236,7 @@ usage: |-
                 python-version: 3.8 3.9 3.10
                 arch: arm64 amd64
 
-          - uses: cloudposse/github-action-matrix-unlimited-jq-query@main
+          - uses: cloudposse/github-action-matrix-extended@main
             id: query
             with:
               sort-by: '[.python-version, .os, .arch] | join("-")'
