@@ -28,7 +28,7 @@
 
 -->
 
-GitHub Action to group list of Atmos stacks and split each group on chunks of 256 items.
+GitHub Action to extend matrix limit with reusable workflows and nested matrices workaround.
 
 ---
 

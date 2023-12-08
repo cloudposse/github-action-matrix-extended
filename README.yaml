@@ -35,7 +35,7 @@ related:
     url: "https://github.com/druzsan/setup-matrix"
 
 # Short description of this project
-description: GitHub Action to group list of Atmos stacks and split each group on chunks of 256 items.
+description: GitHub Action to extend matrix limit with reusable workflows and nested matrices workaround.
 
 introduction: |-
   GitHub Actions matrix have [limit to 256 items](https://docs.github.com/en/actions/using-jobs/using-a-matrix-for-your-jobs#using-a-matrix-strategy)
