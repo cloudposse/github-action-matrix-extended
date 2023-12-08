@@ -24,6 +24,8 @@ jobs:
 
       - uses: ./
         id: current
+        with:
+          matrix: '[]'
 
     outputs:
       result: "${{ steps.current.outputs.query }}"
