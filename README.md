@@ -1,8 +1,6 @@
 
 <!-- markdownlint-disable -->
-# github-action-matrix-extended
-
- [![Latest Release](https://img.shields.io/github/release/cloudposse/github-action-matrix-extended.svg)](https://github.com/cloudposse/github-action-matrix-extended/releases/latest) [![Slack Community](https://slack.cloudposse.com/badge.svg)](https://slack.cloudposse.com)
+# github-action-matrix-extended [![Latest Release](https://img.shields.io/github/release/cloudposse/github-action-matrix-extended.svg)](https://github.com/cloudposse/github-action-matrix-extended/releases/latest) [![Slack Community](https://slack.cloudposse.com/badge.svg)](https://slack.cloudposse.com)
 <!-- markdownlint-restore -->
 
 [![README Header][readme_header_img]][readme_header_link]
@@ -109,7 +107,7 @@ The settings affect to reusable workflows count and usage pattern.
       runs-on: self-hosted
       name: Affected stacks
       outputs:
-        matrix: ${{ steps.jq.outputs.output }}
+        matrix: ${{ steps.extend.outputs.matrix }}
       steps:
         - id: setup-matrix
           uses: druzsan/setup-matrix@v1
@@ -120,18 +118,12 @@ The settings affect to reusable workflows count and usage pattern.
               arch: arm64 amd64
 
         - uses: cloudposse/github-action-matrix-extended@main
-          id: query
+          id: extend
           with:
+            matrix: ${{ steps.setup-matrix.outputs.matrix }}
             sort-by: '[.python-version, .os, .arch] | join("-")'
             group-by: '.arch'
             nested-matrices-count: '1'          
-
-        - id: jq
-          uses: cloudposse/github-action-jq@v0
-          with:
-            compact: true
-            input: ${{ steps.setup-matrix.outputs.matrix }}
-            script: ${{ steps.query.outputs.query }}
 
     operation:
       if: ${{ needs.matrix-builder.outputs.matrix != '{"include":[]}' }}
@@ -165,7 +157,7 @@ The settings affect to reusable workflows count and usage pattern.
       runs-on: self-hosted
       name: Affected stacks
       outputs:
-        matrix: ${{ steps.jq.outputs.output }}
+        matrix: ${{ steps.extend.outputs.matrix }}
       steps:
         - id: setup-matrix
           uses: druzsan/setup-matrix@v1
@@ -176,18 +168,12 @@ The settings affect to reusable workflows count and usage pattern.
               arch: arm64 amd64
 
         - uses: cloudposse/github-action-matrix-extended@main
-          id: query
+          id: extend
           with:
             sort-by: '[.python-version, .os, .arch] | join("-")'
             group-by: '.arch'
             nested-matrices-count: '1'          
-
-        - id: jq
-          uses: cloudposse/github-action-jq@v0
-          with:
-            compact: true
-            input: ${{ steps.setup-matrix.outputs.matrix }}
-            script: ${{ steps.query.outputs.query }}
+            matrix: ${{ steps.setup-matrix.outputs.matrix }}
 
     operation:
       if: ${{ needs.matrix-builder.outputs.matrix != '{"include":[]}' }}
@@ -247,7 +233,7 @@ The settings affect to reusable workflows count and usage pattern.
       runs-on: self-hosted
       name: Affected stacks
       outputs:
-        matrix: ${{ steps.jq.outputs.output }}
+        matrix: ${{ steps.extend.outputs.matrix }}
       steps:
         - id: setup-matrix
           uses: druzsan/setup-matrix@v1
@@ -263,13 +249,7 @@ The settings affect to reusable workflows count and usage pattern.
             sort-by: '[.python-version, .os, .arch] | join("-")'
             group-by: '.arch'
             nested-matrices-count: '1'          
-
-        - id: jq
-          uses: cloudposse/github-action-jq@v0
-          with:
-            compact: true
-            input: ${{ steps.setup-matrix.outputs.matrix }}
-            script: ${{ steps.query.outputs.query }}
+            matrix: ${{ steps.setup-matrix.outputs.matrix }}
 
     operation:
       if: ${{ needs.matrix-builder.outputs.matrix != '{"include":[]}' }}
@@ -350,6 +330,7 @@ The settings affect to reusable workflows count and usage pattern.
 | Name | Description | Default | Required |
 |------|-------------|---------|----------|
 | group-by | Group by query | empty | false |
+| matrix | Matrix inputs (json array or object with include property passed as string or file path) | N/A | true |
 | nested-matrices-count | Matrices nested levels count (from 1 to 3) | 1 | false |
 | sort-by | Sort by query | empty | false |
 
@@ -358,7 +339,7 @@ The settings affect to reusable workflows count and usage pattern.
 
 | Name | Description |
 |------|-------------|
-| query | Matrix unlimited JQ query |
+| matrix | A matrix suitable for extending matrix size workaround |
 <!-- markdownlint-restore -->
 
 
