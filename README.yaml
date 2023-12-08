@@ -88,7 +88,7 @@ usage: |-
         runs-on: self-hosted
         name: Affected stacks
         outputs:
-          matrix: ${{ steps.jq.outputs.output }}
+          matrix: ${{ steps.extend.outputs.matrix }}
         steps:
           - id: setup-matrix
             uses: druzsan/setup-matrix@v1
@@ -99,18 +99,12 @@ usage: |-
                 arch: arm64 amd64
 
           - uses: cloudposse/github-action-matrix-extended@main
-            id: query
+            id: extend
             with:
+              matrix: ${{ steps.setup-matrix.outputs.matrix }}
               sort-by: '[.python-version, .os, .arch] | join("-")'
               group-by: '.arch'
               nested-matrices-count: '1'          
-
-          - id: jq
-            uses: cloudposse/github-action-jq@v0
-            with:
-              compact: true
-              input: ${{ steps.setup-matrix.outputs.matrix }}
-              script: ${{ steps.query.outputs.query }}
   
       operation:
         if: ${{ needs.matrix-builder.outputs.matrix != '{"include":[]}' }}
@@ -144,7 +138,7 @@ usage: |-
         runs-on: self-hosted
         name: Affected stacks
         outputs:
-          matrix: ${{ steps.jq.outputs.output }}
+          matrix: ${{ steps.extend.outputs.matrix }}
         steps:
           - id: setup-matrix
             uses: druzsan/setup-matrix@v1
@@ -155,18 +149,12 @@ usage: |-
                 arch: arm64 amd64
 
           - uses: cloudposse/github-action-matrix-extended@main
-            id: query
+            id: extend
             with:
               sort-by: '[.python-version, .os, .arch] | join("-")'
               group-by: '.arch'
               nested-matrices-count: '1'          
-
-          - id: jq
-            uses: cloudposse/github-action-jq@v0
-            with:
-              compact: true
-              input: ${{ steps.setup-matrix.outputs.matrix }}
-              script: ${{ steps.query.outputs.query }}
+              matrix: ${{ steps.setup-matrix.outputs.matrix }}
   
       operation:
         if: ${{ needs.matrix-builder.outputs.matrix != '{"include":[]}' }}
@@ -226,7 +214,7 @@ usage: |-
         runs-on: self-hosted
         name: Affected stacks
         outputs:
-          matrix: ${{ steps.jq.outputs.output }}
+          matrix: ${{ steps.extend.outputs.matrix }}
         steps:
           - id: setup-matrix
             uses: druzsan/setup-matrix@v1
@@ -242,13 +230,7 @@ usage: |-
               sort-by: '[.python-version, .os, .arch] | join("-")'
               group-by: '.arch'
               nested-matrices-count: '1'          
-
-          - id: jq
-            uses: cloudposse/github-action-jq@v0
-            with:
-              compact: true
-              input: ${{ steps.setup-matrix.outputs.matrix }}
-              script: ${{ steps.query.outputs.query }}
+              matrix: ${{ steps.setup-matrix.outputs.matrix }}
   
       operation:
         if: ${{ needs.matrix-builder.outputs.matrix != '{"include":[]}' }}
