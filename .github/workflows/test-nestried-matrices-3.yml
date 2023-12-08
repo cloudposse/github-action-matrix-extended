@@ -28,12 +28,7 @@ jobs:
           sort-by: '[.version, .os, .arch] | join("-")'
           group-by: '.arch'
           nested-matrices-count: '3'
-
-      - id: matrix
-        uses: cloudposse/github-action-jq@v0
-        with:
-          compact: true
-          input: | 
+          input: |
             [
               {"version": "10", "os": "ubuntu-latest", "arch": "amd64"},
               {"version": "12", "os": "ubuntu-latest", "arch": "amd64"},
@@ -48,11 +43,9 @@ jobs:
               {"version": "12", "os": "windows-latest", "arch": "arm64"},
               {"version": "14", "os": "windows-latest", "arch": "arm64"}            
             ]
-          script: ${{ steps.current.outputs.query }}
 
     outputs:
-      result: "${{ steps.current.outputs.query }}"
-      matrix: "${{ steps.matrix.outputs.output }}"
+      matrix: "${{ steps.current.outputs.matrix }}"
 
   assert:
     runs-on: ubuntu-latest
@@ -62,56 +55,6 @@ jobs:
         with:
           actual: ${{ needs.test.outputs.matrix }}
           expected: '{"include":[{"name":"amd64","items":"{\"include\":[{\"name\":\"10-ubuntu-latest-amd64 - 14-windows-latest-amd64\",\"items\":\"{\\\"include\\\":[{\\\"version\\\":\\\"10\\\",\\\"os\\\":\\\"ubuntu-latest\\\",\\\"arch\\\":\\\"amd64\\\"},{\\\"version\\\":\\\"10\\\",\\\"os\\\":\\\"windows-latest\\\",\\\"arch\\\":\\\"amd64\\\"},{\\\"version\\\":\\\"12\\\",\\\"os\\\":\\\"ubuntu-latest\\\",\\\"arch\\\":\\\"amd64\\\"},{\\\"version\\\":\\\"12\\\",\\\"os\\\":\\\"windows-latest\\\",\\\"arch\\\":\\\"amd64\\\"},{\\\"version\\\":\\\"14\\\",\\\"os\\\":\\\"ubuntu-latest\\\",\\\"arch\\\":\\\"amd64\\\"},{\\\"version\\\":\\\"14\\\",\\\"os\\\":\\\"windows-latest\\\",\\\"arch\\\":\\\"amd64\\\"}]}\"}]}"},{"name":"arm64","items":"{\"include\":[{\"name\":\"10-ubuntu-latest-arm64 - 14-windows-latest-arm64\",\"items\":\"{\\\"include\\\":[{\\\"version\\\":\\\"10\\\",\\\"os\\\":\\\"ubuntu-latest\\\",\\\"arch\\\":\\\"arm64\\\"},{\\\"version\\\":\\\"10\\\",\\\"os\\\":\\\"windows-latest\\\",\\\"arch\\\":\\\"arm64\\\"},{\\\"version\\\":\\\"12\\\",\\\"os\\\":\\\"ubuntu-latest\\\",\\\"arch\\\":\\\"arm64\\\"},{\\\"version\\\":\\\"12\\\",\\\"os\\\":\\\"windows-latest\\\",\\\"arch\\\":\\\"arm64\\\"},{\\\"version\\\":\\\"14\\\",\\\"os\\\":\\\"ubuntu-latest\\\",\\\"arch\\\":\\\"arm64\\\"},{\\\"version\\\":\\\"14\\\",\\\"os\\\":\\\"windows-latest\\\",\\\"arch\\\":\\\"arm64\\\"}]}\"}]}"}]}'
-
-      - uses: nick-fields/assert-action@v1
-        with:
-          actual: ${{ needs.test.outputs.result }}
-          expected: |
-            def name: [.version, .os, .arch] | join("-");
-            def group: .arch;
-            
-            def nestedMatricesLevelsAre(v): 3 == v; 
-            
-            def chunk: .key / 256 | floor;
-            def groupName: [(.value | group), (chunk | if . == 0 then empty else . end)] | join(" ");
-            def groupRange: [first, last] | map(.value | name) | join(" - ");
-            
-            def toGHAMatrix: {"include": . } ;
-            
-            def oneLevelMatrix: . ;
-            
-            def twoLevelMatrix: 
-                group_by(group) |
-                map( to_entries | group_by(chunk) | 
-                    map({
-                        "name": first | groupName,
-                        "items": map(.value) | toGHAMatrix | tostring
-                    })
-                ) | flatten;
-            
-            def threeLevelMatrix:
-                group_by(group) |
-                map({
-                  "name": first | group,
-                  "items": ( to_entries | group_by(chunk) | 
-                    map({
-                      "name": groupRange,
-                      "items": map(.value) | toGHAMatrix | tostring
-                    }) | toGHAMatrix | tostring
-                  )
-                });
-            
-            def groupingStrategy:
-                if nestedMatricesLevelsAre(3) then 
-                    threeLevelMatrix
-                elif nestedMatricesLevelsAre(2)  then 
-                    twoLevelMatrix 
-                else 
-                    oneLevelMatrix 
-                end; 
-            
-            sort_by(name) | groupingStrategy | toGHAMatrix
-
 
   teardown:
     runs-on: ubuntu-latest
