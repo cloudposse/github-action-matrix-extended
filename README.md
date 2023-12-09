@@ -28,7 +28,7 @@
 
 -->
 
-GitHub Action to extend matrix limit with reusable workflows and nested matrices workaround.
+GitHub Action that when used together with reusable workflows makes it easier to workaround the limit of 256 jobs in a matrix.
 
 ---
 
@@ -60,7 +60,7 @@ It's 100% Open Source and licensed under the [APACHE2](LICENSE).
 
 GitHub Actions matrix have [limit to 256 items](https://docs.github.com/en/actions/using-jobs/using-a-matrix-for-your-jobs#using-a-matrix-strategy)
 There is workaround to extend the limit with [reusable workflows](https://github.com/orgs/community/discussions/38704)
-This GitHub Action output query support up to 3 nested workflows levels.
+This GitHub Action outputs structure for up to 3 nested workflows levels.
 In theory run 256 ^ 3 (i.e., 16 777 216) jobs per workflow run!
 
 | Matrix max nested level | Total jobs count limit   |
@@ -69,6 +69,46 @@ In theory run 256 ^ 3 (i.e., 16 777 216) jobs per workflow run!
 |         2               |           65 536         | 
 |         3               |         16 777 216       |
 
+If `nested-matrices-count` input is `1` output `matrix` would be json formatted string with a following structure
+
+```yaml
+{
+  "include": [matrix items]
+}
+```
+
+If `nested-matrices-count` input is `2` output `matrix` would be json formatted string with a following structure
+
+```yaml
+{
+  "include": [{
+    "name": "group name",
+    "items": {
+      "include": [matrix items]
+    } ## serialized as string
+  }]
+}
+```
+
+If `nested-matrices-count` input is `3` output `matrix` would be json formatted string with a following structure
+
+```yaml
+{
+  "include": [{
+    "name": "group name",
+    "items": [{
+      "name": "chunk 256 range name",
+      "include": [
+        "items": {
+          "include": [matrix items] ## serialized as string
+        }
+      ]
+    }] ## serialized as string
+
+    } ## serialized as string
+  }]
+}
+```
 
 > [!WARNING]  
 > Restrict concurrency to avoid DDOS GitHub Actions API and get restriction on your account.
@@ -331,7 +371,7 @@ The settings affect to reusable workflows count and usage pattern.
 |------|-------------|---------|----------|
 | group-by | Group by query | empty | false |
 | matrix | Matrix inputs (json array or object with include property passed as string or file path) | N/A | true |
-| nested-matrices-count | Matrices nested levels count (from 1 to 3) | 1 | false |
+| nested-matrices-count | Number of nested matrices that should be returned as the output (from 1 to 3) | 1 | false |
 | sort-by | Sort by query | empty | false |
 
 

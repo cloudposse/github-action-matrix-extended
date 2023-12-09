@@ -18,7 +18,7 @@ inputs:
     default: 'empty'
   nested-matrices-count:
     required: false
-    description: 'Matrices nested levels count (from 1 to 3)'
+    description: 'Number of nested matrices that should be returned as the output (from 1 to 3)'
     default: "1"
 outputs:
   matrix:
