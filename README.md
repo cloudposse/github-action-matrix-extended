@@ -60,7 +60,7 @@ It's 100% Open Source and licensed under the [APACHE2](LICENSE).
 
 GitHub Actions matrix have [limit to 256 items](https://docs.github.com/en/actions/using-jobs/using-a-matrix-for-your-jobs#using-a-matrix-strategy)
 There is workaround to extend the limit with [reusable workflows](https://github.com/orgs/community/discussions/38704)
-This GitHub Action outputs structure for up to 3 nested workflows levels.
+This GitHub Action outputs a JSON structure for up to 3 levels deep of nested matrixes.
 In theory run 256 ^ 3 (i.e., 16 777 216) jobs per workflow run!
 
 | Matrix max nested level | Total jobs count limit   |
@@ -69,7 +69,7 @@ In theory run 256 ^ 3 (i.e., 16 777 216) jobs per workflow run!
 |         2               |           65 536         | 
 |         3               |         16 777 216       |
 
-If `nested-matrices-count` input is `1` output `matrix` would be json formatted string with a following structure
+If `nested-matrices-count` input is `1`, the output `matrix` would be JSON formatted string with the following structure
 
 ```yaml
 {
@@ -77,7 +77,7 @@ If `nested-matrices-count` input is `1` output `matrix` would be json formatted 
 }
 ```
 
-If `nested-matrices-count` input is `2` output `matrix` would be json formatted string with a following structure
+If `nested-matrices-count` input is `2` output `matrix` whould be a JSON formatted string with the following structure
 
 ```yaml
 {
@@ -90,7 +90,7 @@ If `nested-matrices-count` input is `2` output `matrix` would be json formatted 
 }
 ```
 
-If `nested-matrices-count` input is `3` output `matrix` would be json formatted string with a following structure
+If `nested-matrices-count` input is `3` output `matrix` would be a JSON formatted string with the following structure
 
 ```yaml
 {
@@ -111,7 +111,7 @@ If `nested-matrices-count` input is `3` output `matrix` would be json formatted 
 ```
 
 > [!WARNING]  
-> Restrict concurrency to avoid DDOS GitHub Actions API and get restriction on your account.
+> Make sure you [restrict the concurrency](https://docs.github.com/en/actions/using-jobs/using-concurrency) of your jobs to avoid DDOS'ing the GitHub Actions API, which might cause restrictions to be applied to your account.
 >
 >   | Matrix max nested level | First Matrix Concurrency | Second Matrix Concurrency | Third Matrix Concurrency |
 >   |-------------------------|--------------------------|---------------------------|--------------------------|
@@ -370,7 +370,7 @@ The settings affect to reusable workflows count and usage pattern.
 | Name | Description | Default | Required |
 |------|-------------|---------|----------|
 | group-by | Group by query | empty | false |
-| matrix | Matrix inputs (json array or object with include property passed as string or file path) | N/A | true |
+| matrix | Matrix inputs (JSON array or object which includes property passed as string or file path) | N/A | true |
 | nested-matrices-count | Number of nested matrices that should be returned as the output (from 1 to 3) | 1 | false |
 | sort-by | Sort by query | empty | false |
 
@@ -379,7 +379,7 @@ The settings affect to reusable workflows count and usage pattern.
 
 | Name | Description |
 |------|-------------|
-| matrix | A matrix suitable for extending matrix size workaround |
+| matrix | A matrix suitable for extending matrix size workaround (see README) |
 <!-- markdownlint-restore -->
 
 
