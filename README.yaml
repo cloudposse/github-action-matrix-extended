@@ -5,7 +5,7 @@
 #
 
 # Name of this project
-name: github-action-matrix-unlimited-jq-query
+name: github-action-matrix-extended
 
 # Tags of this project
 tags:
@@ -18,13 +18,13 @@ tags:
 license: "APACHE2"
 
 # Canonical GitHub repo
-github_repo: cloudposse/github-action-matrix-unlimited-jq-query
+github_repo: cloudposse/github-action-matrix-extended
 
 # Badges to display
 badges:
   - name: "Latest Release"
-    image: "https://img.shields.io/github/release/cloudposse/github-action-matrix-unlimited-jq-query.svg"
-    url: "https://github.com/cloudposse/github-action-matrix-unlimited-jq-query/releases/latest"
+    image: "https://img.shields.io/github/release/cloudposse/github-action-matrix-extended.svg"
+    url: "https://github.com/cloudposse/github-action-matrix-extended/releases/latest"
   - name: "Slack Community"
     image: "https://slack.cloudposse.com/badge.svg"
     url: "https://slack.cloudposse.com"
@@ -35,12 +35,12 @@ related:
     url: "https://github.com/druzsan/setup-matrix"
 
 # Short description of this project
-description: GitHub Action to group list of Atmos stacks and split each group on chunks of 256 items.
+description: GitHub Action that when used together with reusable workflows makes it easier to workaround the limit of 256 jobs in a matrix.
 
 introduction: |-
   GitHub Actions matrix have [limit to 256 items](https://docs.github.com/en/actions/using-jobs/using-a-matrix-for-your-jobs#using-a-matrix-strategy)
   There is workaround to extend the limit with [reusable workflows](https://github.com/orgs/community/discussions/38704)
-  This GitHub Action output query support up to 3 nested workflows levels.
+  This GitHub Action outputs a JSON structure for up to 3 levels deep of nested matrixes.
   In theory run 256 ^ 3 (i.e., 16 777 216) jobs per workflow run!
   
   | Matrix max nested level | Total jobs count limit   |
@@ -49,9 +49,49 @@ introduction: |-
   |         2               |           65 536         | 
   |         3               |         16 777 216       |
   
+  If `nested-matrices-count` input is `1`, the output `matrix` would be JSON formatted string with the following structure
+  
+  ```yaml
+  {
+    "include": [matrix items]
+  }
+  ```
+
+  If `nested-matrices-count` input is `2` output `matrix` whould be a JSON formatted string with the following structure
+  
+  ```yaml
+  {
+    "include": [{
+      "name": "group name",
+      "items": {
+        "include": [matrix items]
+      } ## serialized as string
+    }]
+  }
+  ```
+  
+  If `nested-matrices-count` input is `3` output `matrix` would be a JSON formatted string with the following structure
+  
+  ```yaml
+  {
+    "include": [{
+      "name": "group name",
+      "items": [{
+        "name": "chunk 256 range name",
+        "include": [
+          "items": {
+            "include": [matrix items] ## serialized as string
+          }
+        ]
+      }] ## serialized as string
+
+      } ## serialized as string
+    }]
+  }
+  ```
   
   > [!WARNING]  
-  > Restrict concurrency to avoid DDOS GitHub Actions API and get restriction on your account.
+  > Make sure you [restrict the concurrency](https://docs.github.com/en/actions/using-jobs/using-concurrency) of your jobs to avoid DDOS'ing the GitHub Actions API, which might cause restrictions to be applied to your account.
   >
   >   | Matrix max nested level | First Matrix Concurrency | Second Matrix Concurrency | Third Matrix Concurrency |
   >   |-------------------------|--------------------------|---------------------------|--------------------------|
@@ -88,7 +128,7 @@ usage: |-
         runs-on: self-hosted
         name: Affected stacks
         outputs:
-          matrix: ${{ steps.jq.outputs.output }}
+          matrix: ${{ steps.extend.outputs.matrix }}
         steps:
           - id: setup-matrix
             uses: druzsan/setup-matrix@v1
@@ -98,19 +138,13 @@ usage: |-
                 python-version: 3.8 3.9 3.10
                 arch: arm64 amd64
 
-          - uses: cloudposse/github-action-matrix-unlimited-jq-query@main
-            id: query
+          - uses: cloudposse/github-action-matrix-extended@main
+            id: extend
             with:
+              matrix: ${{ steps.setup-matrix.outputs.matrix }}
               sort-by: '[.python-version, .os, .arch] | join("-")'
               group-by: '.arch'
               nested-matrices-count: '1'          
-
-          - id: jq
-            uses: cloudposse/github-action-jq@v0
-            with:
-              compact: true
-              input: ${{ steps.setup-matrix.outputs.matrix }}
-              script: ${{ steps.query.outputs.query }}
   
       operation:
         if: ${{ needs.matrix-builder.outputs.matrix != '{"include":[]}' }}
@@ -144,7 +178,7 @@ usage: |-
         runs-on: self-hosted
         name: Affected stacks
         outputs:
-          matrix: ${{ steps.jq.outputs.output }}
+          matrix: ${{ steps.extend.outputs.matrix }}
         steps:
           - id: setup-matrix
             uses: druzsan/setup-matrix@v1
@@ -154,19 +188,13 @@ usage: |-
                 python-version: 3.8 3.9 3.10
                 arch: arm64 amd64
 
-          - uses: cloudposse/github-action-matrix-unlimited-jq-query@main
-            id: query
+          - uses: cloudposse/github-action-matrix-extended@main
+            id: extend
             with:
               sort-by: '[.python-version, .os, .arch] | join("-")'
               group-by: '.arch'
               nested-matrices-count: '1'          
-
-          - id: jq
-            uses: cloudposse/github-action-jq@v0
-            with:
-              compact: true
-              input: ${{ steps.setup-matrix.outputs.matrix }}
-              script: ${{ steps.query.outputs.query }}
+              matrix: ${{ steps.setup-matrix.outputs.matrix }}
   
       operation:
         if: ${{ needs.matrix-builder.outputs.matrix != '{"include":[]}' }}
@@ -226,7 +254,7 @@ usage: |-
         runs-on: self-hosted
         name: Affected stacks
         outputs:
-          matrix: ${{ steps.jq.outputs.output }}
+          matrix: ${{ steps.extend.outputs.matrix }}
         steps:
           - id: setup-matrix
             uses: druzsan/setup-matrix@v1
@@ -236,19 +264,13 @@ usage: |-
                 python-version: 3.8 3.9 3.10
                 arch: arm64 amd64
 
-          - uses: cloudposse/github-action-matrix-unlimited-jq-query@main
+          - uses: cloudposse/github-action-matrix-extended@main
             id: query
             with:
               sort-by: '[.python-version, .os, .arch] | join("-")'
               group-by: '.arch'
               nested-matrices-count: '1'          
-
-          - id: jq
-            uses: cloudposse/github-action-jq@v0
-            with:
-              compact: true
-              input: ${{ steps.setup-matrix.outputs.matrix }}
-              script: ${{ steps.query.outputs.query }}
+              matrix: ${{ steps.setup-matrix.outputs.matrix }}
   
       operation:
         if: ${{ needs.matrix-builder.outputs.matrix != '{"include":[]}' }}

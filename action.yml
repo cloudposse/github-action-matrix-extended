@@ -1,10 +1,13 @@
-name: 'Matrix unlimited JQ query'
-description: 'Get JQ query to group matrix includes to use with reusable workflows workaround to extend matrix size limit'
+name: 'Matrix extended'
+description: Overcome limitations of GitHub Action\u0027s matrixes using a workaround with reusable workflows and nested matrices
 author: hello@cloudposse.com
 branding:
   icon: 'wind'
   color: 'white'
 inputs:
+  matrix:
+    required: true
+    description: 'Matrix inputs (JSON array or object which includes property passed as string or file path)'
   sort-by:
     required: false
     description: 'Sort by query'
@@ -15,56 +18,65 @@ inputs:
     default: 'empty'
   nested-matrices-count:
     required: false
-    description: 'Matrices nested levels count (from 1 to 3)'
+    description: 'Number of nested matrices that should be returned as the output (from 1 to 3)'
     default: "1"
 outputs:
-  query:
-    description: "Matrix unlimited JQ query"
-    value: |
-      def name: ${{ inputs.sort-by }};
-      def group: ${{ inputs.group-by }};
-      
-      def nestedMatricesLevelsAre(v): ${{ inputs.nested-matrices-count }} == v; 
-      
-      def chunk: .key / 256 | floor;
-      def groupName: [(.value | group), (chunk | if . == 0 then empty else . end)] | join(" ");
-      def groupRange: [first, last] | map(.value | name) | join(" - ");
-      
-      def toGHAMatrix: {"include": . } ;
-      
-      def oneLevelMatrix: . ;
-      
-      def twoLevelMatrix: 
-          group_by(group) |
-          map( to_entries | group_by(chunk) | 
-              map({
-                  "name": first | groupName,
-                  "items": map(.value) | toGHAMatrix | tostring
-              })
-          ) | flatten;
-      
-      def threeLevelMatrix:
-          group_by(group) |
-          map({
-            "name": first | group,
-            "items": ( to_entries | group_by(chunk) | 
-              map({
-                "name": groupRange,
-                "items": map(.value) | toGHAMatrix | tostring
-              }) | toGHAMatrix | tostring
-            )
-          });
-      
-      def groupingStrategy:
-          if nestedMatricesLevelsAre(3) then 
-              threeLevelMatrix
-          elif nestedMatricesLevelsAre(2)  then 
-              twoLevelMatrix 
-          else 
-              oneLevelMatrix 
-          end; 
-      
-      sort_by(name) | groupingStrategy | toGHAMatrix
+  matrix:
+    description: A matrix suitable for extending matrix size workaround (see README)
+    value: ${{ steps.matrix.outputs.output }}
 runs:
   using: "composite"
-  steps: []
+  steps:
+    - id: matrix
+      uses: cloudposse/github-action-jq@v0
+      with:
+        compact: true
+        input: ${{ inputs.matrix }}
+        script: |
+          def name: ${{ inputs.sort-by }};
+          def group: ${{ inputs.group-by }};
+          
+          def nestedMatricesLevelsAre(v): ${{ inputs.nested-matrices-count }} == v; 
+          
+          def chunk: .key / 256 | floor;
+          def groupName: [(.value | group), (chunk | if . == 0 then empty else . end)] | join(" ");
+          def groupRange: [first, last] | map(.value | name) | join(" - ");
+          
+          def toGHAMatrix: {"include": . } ;
+          
+          def oneLevelMatrix: . ;
+          
+          def twoLevelMatrix: 
+              group_by(group) |
+              map( to_entries | group_by(chunk) | 
+                  map({
+                      "name": first | groupName,
+                      "items": map(.value) | toGHAMatrix | tostring
+                  })
+              ) | flatten;
+          
+          def threeLevelMatrix:
+              group_by(group) |
+              map({
+                "name": first | group,
+                "items": ( to_entries | group_by(chunk) | 
+                  map({
+                    "name": groupRange,
+                    "items": map(.value) | toGHAMatrix | tostring
+                  }) | toGHAMatrix | tostring
+                )
+              });
+          
+          def groupingStrategy:
+              if nestedMatricesLevelsAre(3) then 
+                  threeLevelMatrix
+              elif nestedMatricesLevelsAre(2)  then 
+                  twoLevelMatrix 
+              else 
+                  oneLevelMatrix 
+              end; 
+
+          def parseInput:
+              if type == "array" then . else .include end;
+          
+          parseInput | sort_by(name) | groupingStrategy | toGHAMatrix
