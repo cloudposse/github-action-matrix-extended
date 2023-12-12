@@ -1,5 +1,5 @@
 name: 'Matrix extended'
-description: 'Extend GHA matrix limit with reusable workflows and nested matrices workaround'
+description: 'Overcome limitations of GitHub Action's matrixes using a workaround with reusable workflows and nested matrices'
 author: hello@cloudposse.com
 branding:
   icon: 'wind'
@@ -7,7 +7,7 @@ branding:
 inputs:
   matrix:
     required: true
-    description: 'Matrix inputs (json array or object with include property passed as string or file path)'
+    description: 'Matrix inputs (JSON array or object which includes property passed as string or file path)'
   sort-by:
     required: false
     description: 'Sort by query'
@@ -22,7 +22,7 @@ inputs:
     default: "1"
 outputs:
   matrix:
-    description: A matrix suitable for extending matrix size workaround
+    description: A matrix suitable for extending matrix size workaround (see README)
     value: ${{ steps.matrix.outputs.output }}
 runs:
   using: "composite"
