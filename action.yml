@@ -1,5 +1,5 @@
 name: 'Matrix extended'
-description: 'Overcome limitations of GitHub Action's matrixes using a workaround with reusable workflows and nested matrices'
+description: "Overcome limitations of GitHub Action's matrixes using a workaround with reusable workflows and nested matrices"
 author: hello@cloudposse.com
 branding:
   icon: 'wind'
