@@ -23,7 +23,7 @@ inputs:
 outputs:
   matrix:
     description: A matrix suitable for extending matrix size workaround (see README)
-    value: ${{ steps.matrix.outputs.output }}
+    value: ${{ steps.matrix.outputs.output != '{"include":[]}' && steps.matrix.outputs.output || '' }}
 runs:
   using: "composite"
   steps:
