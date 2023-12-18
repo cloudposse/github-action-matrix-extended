@@ -38,7 +38,7 @@ jobs:
       - uses: nick-fields/assert-action@v1
         with:
           actual: ${{ needs.test.outputs.matrix }}
-          expected: '{"include":[]}'
+          expected: ''
 
   teardown:
     runs-on: ubuntu-latest
