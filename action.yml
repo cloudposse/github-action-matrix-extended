@@ -51,9 +51,12 @@ runs:
         # action's input description); pass it through unchanged in that case.
         content="$(cat "$matrix_file")"
         if [[ -f "$content" ]]; then
+          rm -f "$matrix_file"
           echo "file=$content" >> "$GITHUB_OUTPUT"
+          echo "generated=false" >> "$GITHUB_OUTPUT"
         else
           echo "file=$matrix_file" >> "$GITHUB_OUTPUT"
+          echo "generated=true" >> "$GITHUB_OUTPUT"
         fi
     - id: matrix
       uses: cloudposse/github-action-jq@v0
@@ -106,5 +109,9 @@ runs:
 
           def parseInput:
               if type == "array" then . else .include end;
-          
+
           parseInput | sort_by(name) | groupingStrategy | toGHAMatrix
+    - id: cleanup-matrix
+      if: always() && steps.prepare-matrix.outputs.generated == 'true'
+      shell: bash
+      run: rm -f "${{ steps.prepare-matrix.outputs.file }}"
