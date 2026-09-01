@@ -27,11 +27,42 @@ outputs:
 runs:
   using: "composite"
   steps:
+    - id: prepare-matrix
+      shell: bash
+      env:
+        RUNNER_TEMP: ${{ runner.temp }}
+      run: |
+        set -euo pipefail
+
+        # `matrix` can be a very large JSON blob. GitHub Actions passes `with:`
+        # inputs to `uses:` steps as OS environment variables, and Linux caps a
+        # single env/argv string at 128 KiB (MAX_ARG_STRLEN), so a large inline
+        # value makes the runner fail to even start the jq action's node
+        # process ("Argument list too long"). Materializing it to a file here
+        # avoids that: the substitution below happens directly in this script
+        # file (no OS env/argv size limit), and only a short file path is
+        # forwarded to the jq step.
+        matrix_file="${RUNNER_TEMP}/matrix-extended-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$$.json"
+        cat > "$matrix_file" <<'MATRIX_EXTENDED_INPUT_EOF'
+        ${{ inputs.matrix }}
+        MATRIX_EXTENDED_INPUT_EOF
+
+        # `matrix` may already be a file path rather than inline JSON (per the
+        # action's input description); pass it through unchanged in that case.
+        content="$(cat "$matrix_file")"
+        if [[ -f "$content" ]]; then
+          rm -f "$matrix_file"
+          echo "file=$content" >> "$GITHUB_OUTPUT"
+          echo "generated=false" >> "$GITHUB_OUTPUT"
+        else
+          echo "file=$matrix_file" >> "$GITHUB_OUTPUT"
+          echo "generated=true" >> "$GITHUB_OUTPUT"
+        fi
     - id: matrix
       uses: cloudposse/github-action-jq@v0
       with:
         compact: true
-        input: ${{ inputs.matrix }}
+        input: ${{ steps.prepare-matrix.outputs.file }}
         script: |
           def name: ${{ inputs.sort-by }};
           def group: ${{ inputs.group-by }};
@@ -78,5 +109,9 @@ runs:
 
           def parseInput:
               if type == "array" then . else .include end;
-          
+
           parseInput | sort_by(name) | groupingStrategy | toGHAMatrix
+    - id: cleanup-matrix
+      if: always() && steps.prepare-matrix.outputs.generated == 'true'
+      shell: bash
+      run: rm -f "${{ steps.prepare-matrix.outputs.file }}"
