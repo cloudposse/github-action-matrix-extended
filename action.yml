@@ -59,7 +59,7 @@ runs:
           echo "generated=true" >> "$GITHUB_OUTPUT"
         fi
     - id: matrix
-      uses: cloudposse/github-action-jq@v0
+      uses: cloudposse/github-action-jq@aff18a1f2e845b56fcfe995b01a558836dc2025b # v0.4.1
       with:
         compact: true
         input: ${{ steps.prepare-matrix.outputs.file }}
